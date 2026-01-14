@@ -63,13 +63,29 @@ def should_show_message(msg: BaseMessage, data: dict[str, Any], config: RenderCo
 def process_stream(
     input_file: TextIO,
     config: RenderConfig,
-    formatter: Formatter
+    formatter: Formatter,
+    tail_lines: int = 0
 ) -> None:
-    """Process JSONL stream and output formatted messages."""
+    """Process JSONL stream and output formatted messages.
 
-    line_num = 0
+    Args:
+        input_file: File-like object to read JSONL from
+        config: Rendering configuration
+        formatter: Output formatter
+        tail_lines: If > 0, only process the last N lines
+    """
+    # If tail_lines specified, read all and take last N
+    if tail_lines > 0:
+        all_lines = input_file.readlines()
+        lines_to_process = all_lines[-tail_lines:]
+        start_line_num = max(0, len(all_lines) - tail_lines)
+    else:
+        lines_to_process = input_file
+        start_line_num = 0
 
-    for line in input_file:
+    line_num = start_line_num
+
+    for line in lines_to_process:
         line_num += 1
         line = line.strip()
 

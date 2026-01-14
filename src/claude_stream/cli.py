@@ -52,12 +52,12 @@ Output Formats:
     plain       Plain text, no formatting
 
 Examples:
-    %(prog)s --file session.jsonl
-    %(prog)s --latest --format markdown > export.md
-    %(prog)s --latest --compact --format plain
+    %(prog)s session.jsonl                      # Parse entire file
+    %(prog)s session.jsonl -n 20                # Show last 20 lines
+    %(prog)s --latest -n 50                     # Last 50 lines of most recent session
+    %(prog)s --latest --format markdown > out.md
     %(prog)s --watch ~/.claude/projects/        # Watch all sessions (new content only)
     %(prog)s --watch session.jsonl -n 10        # Tail last 10 lines, then watch
-    %(prog)s --watch ~/.claude/projects/ -n 5   # Last 5 lines per file, then watch
         """
     )
 
@@ -105,7 +105,7 @@ Examples:
     parser.add_argument("-w", "--watch", type=Path, metavar="PATH",
                         help="Watch a file or directory for changes (like tail -f)")
     parser.add_argument("-n", "--lines", type=int, default=0, metavar="N",
-                        help="With --watch: show last N lines per file before watching (default: 0)")
+                        help="Show only last N lines (works with files and --watch)")
 
     return parser.parse_args()
 
@@ -187,7 +187,7 @@ def main() -> int:
         return 1
 
     try:
-        process_stream(input_file, config, formatter)
+        process_stream(input_file, config, formatter, tail_lines=args.lines)
     finally:
         if input_file is not sys.stdin:
             input_file.close()
