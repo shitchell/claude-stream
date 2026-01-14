@@ -200,6 +200,6 @@ if __name__ == "__main__":
     try:
         exit_code = main()
     except KeyboardInterrupt:
-        print("\nexiting", end="")
+        print("\nexiting", file=sys.stderr)
 
     sys.exit(exit_code)
