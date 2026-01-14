@@ -27,8 +27,11 @@ def should_show_message(msg: BaseMessage, data: dict[str, Any], config: RenderCo
         subtype = data.get("subtype")
         if msg.type == "assistant":
             content_types = set()
-            for item in data.get("message", {}).get("content", []):
-                content_types.add(item.get("type"))
+            content = data.get("message", {}).get("content", [])
+            if isinstance(content, list):
+                for item in content:
+                    if isinstance(item, dict):
+                        content_types.add(item.get("type"))
             if not config.show_subtypes.intersection(content_types):
                 return False
         elif subtype and subtype not in config.show_subtypes:
@@ -37,9 +40,11 @@ def should_show_message(msg: BaseMessage, data: dict[str, Any], config: RenderCo
     # Check tool filter
     if config.show_tools:
         tools_in_msg = set()
-        for item in data.get("message", {}).get("content", []):
-            if item.get("type") == "tool_use":
-                tools_in_msg.add(item.get("name"))
+        content = data.get("message", {}).get("content", [])
+        if isinstance(content, list):
+            for item in content:
+                if isinstance(item, dict) and item.get("type") == "tool_use":
+                    tools_in_msg.add(item.get("name"))
         if not tools_in_msg:
             return False
         if not config.show_tools.intersection(tools_in_msg):
