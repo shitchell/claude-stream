@@ -110,4 +110,4 @@ claude-stream --line-numbers session.jsonl
 
 ## License
 
-MIT
+[WTFPL](http://www.wtfpl.net/)

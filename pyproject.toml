@@ -7,7 +7,7 @@ name = "claude-stream"
 version = "0.1.0"
 description = "Parse and prettify Claude Code JSONL stream output"
 readme = "README.md"
-license = "MIT"
+license = "WTFPL"
 requires-python = ">=3.10"
 authors = [
     { name = "Shaun Mitchell" }
@@ -17,7 +17,7 @@ classifiers = [
     "Development Status :: 4 - Beta",
     "Environment :: Console",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
+    "License :: Public Domain",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
