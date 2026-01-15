@@ -1,5 +1,7 @@
 # claude-stream
 
+[![PyPI version](https://badge.fury.io/py/claude-stream.svg)](https://pypi.org/project/claude-stream/)
+
 Parse and prettify Claude Code JSONL stream output.
 
 ## Installation
@@ -57,15 +59,17 @@ converted to Claude's project format (e.g., `/home/user/project` becomes
 ### Output Formats
 
 ```bash
-# ANSI terminal colors (default)
-claude-stream --format ansi session.jsonl
+# ANSI terminal colors (default for TTY)
+claude-stream session.jsonl
 
 # Markdown
 claude-stream --format markdown session.jsonl > export.md
 
-# Plain text
-claude-stream --format plain session.jsonl
+# Plain text (default when piped)
+claude-stream session.jsonl | less
 ```
+
+Output automatically switches to plain text when piped. Use `--format ansi` to force colors.
 
 ### Filtering
 
