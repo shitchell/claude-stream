@@ -18,6 +18,58 @@ from . import (
 )
 
 
+def encode_path(path: str) -> str:
+    """Encode a filesystem path to Claude's .claude/projects/ format.
+
+    Algorithm:
+      - [a-zA-Z0-9-] → preserved
+      - All other chars → max(1, floor(utf8_bytes/2)) dashes
+
+    This means:
+      - ASCII special chars (/, ., _, space) → 1 dash each
+      - BMP chars (U+0000-U+FFFF, 1-3 bytes) → 1 dash each
+      - SMP chars (U+10000+, 4 bytes) → 2 dashes each
+    """
+    result = []
+    for char in path:
+        if char.isalnum() or char == "-":
+            result.append(char)
+        else:
+            # Calculate dashes: max(1, floor(bytes/2))
+            byte_len = len(char.encode("utf-8"))
+            dashes = max(1, byte_len // 2)
+            result.append("-" * dashes)
+    return "".join(result)
+
+
+def resolve_watch_path(path: Path) -> Path:
+    """Resolve a path to its Claude project directory if needed.
+
+    If the path is already under ~/.claude, returns it as-is.
+    Otherwise, converts the path to Claude's project format and
+    returns that if it exists.
+    """
+    claude_base = Path.home() / ".claude"
+    resolved = path.resolve()
+
+    # Already under ~/.claude? Use directly
+    try:
+        resolved.relative_to(claude_base)
+        return resolved
+    except ValueError:
+        pass  # Not under ~/.claude
+
+    # Convert to Claude project path format
+    encoded = encode_path(str(resolved))
+    claude_path = claude_base / "projects" / encoded
+
+    if claude_path.exists():
+        return claude_path
+
+    # Fall back to original path
+    return resolved
+
+
 def find_session_file(session_id: str | None = None, latest: bool = False) -> Path | None:
     """Find a session file by UUID or get the latest."""
 
@@ -56,8 +108,9 @@ Examples:
     %(prog)s session.jsonl -n 20                # Show last 20 lines
     %(prog)s --latest -n 50                     # Last 50 lines of most recent session
     %(prog)s --latest --format markdown > out.md
-    %(prog)s --watch ~/.claude/projects/        # Watch all sessions (new content only)
-    %(prog)s --watch session.jsonl -n 10        # Tail last 10 lines, then watch
+    %(prog)s --watch ~/.claude/projects/        # Watch all sessions
+    %(prog)s --watch .                          # Watch current dir's Claude sessions
+    %(prog)s --watch ~/myproject -n 10          # Watch project with initial context
         """
     )
 
@@ -151,10 +204,17 @@ def main() -> int:
 
     # Handle watch mode
     if args.watch:
-        if not args.watch.exists():
+        watch_target = resolve_watch_path(args.watch)
+        if not watch_target.exists():
             print(f"error: path not found: {args.watch}", file=sys.stderr)
+            # If we tried to resolve to a Claude path, mention it
+            if watch_target != args.watch.resolve():
+                print(f"  (looked for Claude project at: {watch_target})", file=sys.stderr)
             return 1
-        watch_path(args.watch, config, formatter, recursive=True, tail_lines=args.lines)
+        # Show resolved path if different from input
+        if watch_target != args.watch.resolve():
+            print(f"watching: {watch_target}", file=sys.stderr)
+        watch_path(watch_target, config, formatter, recursive=True, tail_lines=args.lines)
         return 0
 
     # Determine input source
