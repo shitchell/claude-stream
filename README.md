@@ -4,6 +4,8 @@
 
 Parse and prettify Claude Code JSONL stream output.
 
+![claude-stream output](screenshots/demo.svg)
+
 ## Installation
 
 ```bash
@@ -15,6 +17,8 @@ For file watching support:
 ```bash
 pip install "claude-stream[watch]"
 ```
+
+![claude-stream watch mode](screenshots/demo.gif)
 
 ## Usage
 
