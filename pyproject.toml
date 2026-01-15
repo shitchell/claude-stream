@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "claude-stream"
-version = "0.1.0"
+version = "0.1.1"
 description = "Parse and prettify Claude Code JSONL stream output"
 readme = "README.md"
 license = "WTFPL"
