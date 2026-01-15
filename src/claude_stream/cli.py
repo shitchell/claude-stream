@@ -127,8 +127,8 @@ Examples:
     parser.add_argument(
         "--format", "-F",
         choices=["ansi", "markdown", "plain"],
-        default="ansi",
-        help="Output format (default: ansi)"
+        default=None,
+        help="Output format (default: ansi, or plain if piped)"
     )
 
     # Visibility controls
@@ -193,11 +193,15 @@ def main() -> int:
     if args.exclude_patterns:
         config.exclude_patterns = args.exclude_patterns
 
-    # Select formatter
+    # Select formatter (default to plain if stdout is not a TTY)
+    output_format = args.format
+    if output_format is None:
+        output_format = "ansi" if sys.stdout.isatty() else "plain"
+
     formatter: Formatter
-    if args.format == "markdown":
+    if output_format == "markdown":
         formatter = MarkdownFormatter()
-    elif args.format == "plain":
+    elif output_format == "plain":
         formatter = PlainFormatter()
     else:
         formatter = ANSIFormatter()
