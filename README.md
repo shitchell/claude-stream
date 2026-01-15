@@ -18,6 +18,8 @@ For file watching support:
 pip install "claude-stream[watch]"
 ```
 
+---
+
 ![claude-stream watch mode](screenshots/demo.gif)
 
 ## Usage
