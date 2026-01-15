@@ -20,21 +20,39 @@ pip install "claude-stream[watch]"
 # Read from a file
 claude-stream session.jsonl
 
+# Show only last N lines
+claude-stream session.jsonl -n 20
+
 # Read from stdin
 cat session.jsonl | claude-stream
 
 # Parse the most recent session
 claude-stream --latest
+claude-stream --latest -n 50              # Last 50 lines
 
 # Find and parse a session by UUID
 claude-stream --session abc123
+```
 
-# Watch for new messages (like tail -f)
+### Watch Mode
+
+Watch for new messages in real-time (like `tail -f`):
+
+```bash
+# Watch all Claude sessions
 claude-stream --watch ~/.claude/projects/
 
+# Watch from any project directory (auto-resolves to Claude path)
+claude-stream --watch .
+claude-stream --watch ~/myproject
+
 # Watch with initial context (last N lines)
-claude-stream --watch session.jsonl -n 10
+claude-stream --watch . -n 10
 ```
+
+When given a directory outside `~/.claude`, the path is automatically
+converted to Claude's project format (e.g., `/home/user/project` becomes
+`~/.claude/projects/-home-user-project`).
 
 ### Output Formats
 
