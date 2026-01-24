@@ -4,7 +4,7 @@
 
 Parse and prettify Claude Code JSONL stream output.
 
-![claude-stream output](screenshots/demo.svg)
+![claude-stream output](screenshots/compact.png)
 
 ## Installation
 
