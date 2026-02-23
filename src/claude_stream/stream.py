@@ -15,7 +15,9 @@ from .formatters import Formatter
 from .models import BaseMessage, UserMessage, RenderConfig, parse_message
 
 
-def should_show_message(msg: BaseMessage, data: dict[str, Any], config: RenderConfig) -> bool:
+def should_show_message(
+    msg: BaseMessage, data: dict[str, Any], config: RenderConfig
+) -> bool:
     """Determine if a message should be displayed based on filters."""
 
     # Check type filter
@@ -78,10 +80,7 @@ def should_show_message(msg: BaseMessage, data: dict[str, Any], config: RenderCo
 
 
 def process_stream(
-    input_file: TextIO,
-    config: RenderConfig,
-    formatter: Formatter,
-    tail_lines: int = 0
+    input_file: TextIO, config: RenderConfig, formatter: Formatter, tail_lines: int = 0
 ) -> None:
     """Process JSONL stream and output formatted messages.
 
@@ -124,10 +123,7 @@ def process_stream(
         blocks = msg.render(config)
 
         if config.show_line_numbers:
-            blocks.insert(0, TextBlock(
-                text=f"[{line_num}]",
-                styles={Style.METADATA}
-            ))
+            blocks.insert(0, TextBlock(text=f"[{line_num}]", styles={Style.METADATA}))
 
         output = formatter.format(blocks)
         print(output)

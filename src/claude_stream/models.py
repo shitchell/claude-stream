@@ -35,6 +35,7 @@ TOOL_INPUT_TRUNCATE_LENGTH = 200
 # TypedDicts for Known Structures
 # =============================================================================
 
+
 class UsageInfo(TypedDict, total=False):
     """Token usage information."""
 
@@ -131,6 +132,7 @@ class CompactMetadata(TypedDict, total=False):
 # Render Configuration
 # =============================================================================
 
+
 @dataclass
 class RenderConfig:
     """Configuration for rendering messages."""
@@ -141,10 +143,17 @@ class RenderConfig:
     show_line_numbers: bool = False
 
     # Filtering
-    show_types: set[str] = field(default_factory=lambda: {
-        "system", "assistant", "user", "file-history-snapshot",
-        "summary", "queue-operation", "result"
-    })
+    show_types: set[str] = field(
+        default_factory=lambda: {
+            "system",
+            "assistant",
+            "user",
+            "file-history-snapshot",
+            "summary",
+            "queue-operation",
+            "result",
+        }
+    )
     show_subtypes: set[str] = field(default_factory=set)
     show_tools: set[str] = field(default_factory=set)
     grep_patterns: list[str] = field(default_factory=list)
@@ -154,6 +163,7 @@ class RenderConfig:
 # =============================================================================
 # Content Block Models (nested within messages)
 # =============================================================================
+
 
 class ContentBlock(BaseModel):
     """Base for content blocks within messages."""
@@ -190,17 +200,9 @@ class ThinkingContent(ContentBlock):
             return []
 
         blocks: list[RenderBlock] = []
-        blocks.append(TextBlock(
-            text="💭 Thinking:",
-            indent=1,
-            styles={Style.THINKING}
-        ))
+        blocks.append(TextBlock(text="💭 Thinking:", indent=1, styles={Style.THINKING}))
         for line in self.thinking.split("\n"):
-            blocks.append(TextBlock(
-                text=line,
-                indent=2,
-                styles={Style.THINKING}
-            ))
+            blocks.append(TextBlock(text=line, indent=2, styles={Style.THINKING}))
         return blocks
 
 
@@ -216,17 +218,12 @@ class ToolUseContent(ContentBlock):
         blocks: list[RenderBlock] = []
 
         # Tool header
-        blocks.append(HeaderBlock(
-            text=f"Tool: {self.name}",
-            icon="▸",
-            level=3,
-            styles={Style.TOOL}
-        ))
-        blocks.append(TextBlock(
-            text=f"({self.id})",
-            indent=1,
-            styles={Style.METADATA}
-        ))
+        blocks.append(
+            HeaderBlock(
+                text=f"Tool: {self.name}", icon="▸", level=3, styles={Style.TOOL}
+            )
+        )
+        blocks.append(TextBlock(text=f"({self.id})", indent=1, styles={Style.METADATA}))
 
         # Tool inputs
         if config.show_tool_results:
@@ -234,11 +231,7 @@ class ToolUseContent(ContentBlock):
                 value_str = str(value)
                 if len(value_str) > TOOL_INPUT_TRUNCATE_LENGTH:
                     value_str = value_str[:TOOL_INPUT_TRUNCATE_LENGTH] + "..."
-                blocks.append(KeyValueBlock(
-                    key=key,
-                    value=value_str,
-                    indent=2
-                ))
+                blocks.append(KeyValueBlock(key=key, value=value_str, indent=2))
 
         return blocks
 
@@ -256,25 +249,17 @@ class ToolResultContent(ContentBlock):
 
         # Result header
         if self.is_error:
-            blocks.append(HeaderBlock(
-                text="Error",
-                icon="✗",
-                level=3,
-                styles={Style.ERROR}
-            ))
+            blocks.append(
+                HeaderBlock(text="Error", icon="✗", level=3, styles={Style.ERROR})
+            )
         else:
-            blocks.append(HeaderBlock(
-                text="Result",
-                icon="✓",
-                level=3,
-                styles={Style.SUCCESS}
-            ))
+            blocks.append(
+                HeaderBlock(text="Result", icon="✓", level=3, styles={Style.SUCCESS})
+            )
 
-        blocks.append(TextBlock(
-            text=f"({self.tool_use_id})",
-            indent=1,
-            styles={Style.METADATA}
-        ))
+        blocks.append(
+            TextBlock(text=f"({self.tool_use_id})", indent=1, styles={Style.METADATA})
+        )
 
         # Result content
         if config.show_tool_results and self.content:
@@ -285,11 +270,13 @@ class ToolResultContent(ContentBlock):
                 blocks.append(TextBlock(text=line, indent=2))
 
             if len(lines) > TOOL_RESULT_PREVIEW_LINES:
-                blocks.append(TextBlock(
-                    text=f"... ({len(lines)} lines total)",
-                    indent=2,
-                    styles={Style.METADATA}
-                ))
+                blocks.append(
+                    TextBlock(
+                        text=f"... ({len(lines)} lines total)",
+                        indent=2,
+                        styles={Style.METADATA},
+                    )
+                )
 
         return blocks
 
@@ -318,10 +305,7 @@ class ImageContent(ContentBlock):
         media_type = self.source.get("media_type", "unknown")
         return [
             HeaderBlock(
-                text=f"Image ({media_type})",
-                icon="🖼",
-                level=3,
-                styles={Style.USER}
+                text=f"Image ({media_type})", icon="🖼", level=3, styles={Style.USER}
             )
         ]
 
@@ -329,6 +313,7 @@ class ImageContent(ContentBlock):
 # =============================================================================
 # Message Models - Base Classes
 # =============================================================================
+
 
 class BaseMessage(BaseModel):
     """Base class for all message types."""
@@ -353,11 +338,27 @@ class BaseMessage(BaseModel):
         blocks.append(TextBlock(text="-- Metadata", indent=1, styles={Style.METADATA}))
 
         if self.uuid:
-            blocks.append(TextBlock(text=f"| uuid: {self.uuid}", indent=1, styles={Style.METADATA}))
+            blocks.append(
+                TextBlock(
+                    text=f"| uuid: {self.uuid}", indent=1, styles={Style.METADATA}
+                )
+            )
         if self.sessionId:
-            blocks.append(TextBlock(text=f"| session: {self.sessionId}", indent=1, styles={Style.METADATA}))
+            blocks.append(
+                TextBlock(
+                    text=f"| session: {self.sessionId}",
+                    indent=1,
+                    styles={Style.METADATA},
+                )
+            )
         if self.timestamp:
-            blocks.append(TextBlock(text=f"| timestamp: {self.timestamp}", indent=1, styles={Style.METADATA}))
+            blocks.append(
+                TextBlock(
+                    text=f"| timestamp: {self.timestamp}",
+                    indent=1,
+                    styles={Style.METADATA},
+                )
+            )
 
         blocks.append(TextBlock(text="--", indent=1, styles={Style.METADATA}))
         return blocks
@@ -388,12 +389,14 @@ class AgentStyleMessage(BaseMessage):
 
     def render_header(self, config: RenderConfig) -> list[RenderBlock]:
         """Render the agent header."""
-        return [HeaderBlock(
-            text=self.get_agent_label(),
-            icon=self.get_agent_icon(),
-            level=2,
-            styles={Style.ASSISTANT, Style.BOLD}
-        )]
+        return [
+            HeaderBlock(
+                text=self.get_agent_label(),
+                icon=self.get_agent_icon(),
+                level=2,
+                styles={Style.ASSISTANT, Style.BOLD},
+            )
+        ]
 
     def render_content(self, config: RenderConfig) -> list[RenderBlock]:
         """Render the message content."""
@@ -432,11 +435,13 @@ class AgentStyleMessage(BaseMessage):
         cache_read = usage.get("cache_read_input_tokens", 0)
 
         if in_tokens > 0 or out_tokens > 0:
-            return [TextBlock(
-                text=f"Tokens: in={in_tokens} out={out_tokens} cache={cache_read}",
-                indent=1,
-                styles={Style.METADATA}
-            )]
+            return [
+                TextBlock(
+                    text=f"Tokens: in={in_tokens} out={out_tokens} cache={cache_read}",
+                    indent=1,
+                    styles={Style.METADATA},
+                )
+            ]
         return []
 
     def render(self, config: RenderConfig) -> list[RenderBlock]:
@@ -462,17 +467,20 @@ class SystemStyleMessage(BaseMessage):
 
     def render_header(self, config: RenderConfig) -> list[RenderBlock]:
         """Render system header."""
-        return [HeaderBlock(
-            text=self.get_system_label(),
-            icon=self.get_system_icon(),
-            level=2,
-            styles={Style.SYSTEM}
-        )]
+        return [
+            HeaderBlock(
+                text=self.get_system_label(),
+                icon=self.get_system_icon(),
+                level=2,
+                styles={Style.SYSTEM},
+            )
+        ]
 
 
 # =============================================================================
 # Message Models - Concrete Types
 # =============================================================================
+
 
 class AssistantMessage(AgentStyleMessage):
     """Assistant response message."""
@@ -497,8 +505,8 @@ class UserMessage(BaseMessage):
     def is_subagent_result(self) -> bool:
         """Check if this is a sub-agent result."""
         return (
-            isinstance(self.toolUseResult, dict) and
-            self.toolUseResult.get("agentId") is not None
+            isinstance(self.toolUseResult, dict)
+            and self.toolUseResult.get("agentId") is not None
         )
 
     def is_tool_result(self) -> bool:
@@ -513,8 +521,8 @@ class UserMessage(BaseMessage):
         """Check if this is a local slash command."""
         content = self.message.get("content", "")
         return isinstance(content, str) and (
-            content.startswith("<command-name>") or
-            content.startswith("<local-command-stdout>")
+            content.startswith("<command-name>")
+            or content.startswith("<local-command-stdout>")
         )
 
     def get_subtype(self) -> str:
@@ -540,17 +548,14 @@ class UserMessage(BaseMessage):
         else:
             return self.render_user_input(config, meta=self.is_meta())
 
-    def render_user_input(self, config: RenderConfig, meta: bool = False) -> list[RenderBlock]:
+    def render_user_input(
+        self, config: RenderConfig, meta: bool = False
+    ) -> list[RenderBlock]:
         """Render as regular user input."""
         blocks: list[RenderBlock] = []
 
         label = "USER [meta]" if meta else "USER"
-        blocks.append(HeaderBlock(
-            text=label,
-            icon="◂",
-            level=2,
-            styles={Style.USER}
-        ))
+        blocks.append(HeaderBlock(text=label, icon="◂", level=2, styles={Style.USER}))
 
         content = self.message.get("content")
         if isinstance(content, str) and content:
@@ -595,12 +600,14 @@ class UserMessage(BaseMessage):
 
         agent_id = self.toolUseResult.get("agentId", "unknown")
 
-        blocks.append(HeaderBlock(
-            text=f"SUB-AGENT ({agent_id})",
-            icon="◆",
-            level=2,
-            styles={Style.ASSISTANT, Style.BOLD}
-        ))
+        blocks.append(
+            HeaderBlock(
+                text=f"SUB-AGENT ({agent_id})",
+                icon="◆",
+                level=2,
+                styles={Style.ASSISTANT, Style.BOLD},
+            )
+        )
 
         # Render sub-agent content
         content_items = self.toolUseResult.get("content", [])
@@ -613,11 +620,13 @@ class UserMessage(BaseMessage):
         # Token usage
         total_tokens = self.toolUseResult.get("totalTokens", 0)
         if total_tokens > 0:
-            blocks.append(TextBlock(
-                text=f"Total tokens: {total_tokens}",
-                indent=1,
-                styles={Style.METADATA}
-            ))
+            blocks.append(
+                TextBlock(
+                    text=f"Total tokens: {total_tokens}",
+                    indent=1,
+                    styles={Style.METADATA},
+                )
+            )
 
         blocks.extend(self.render_metadata(config))
         blocks.append(SpacerBlock())
@@ -646,37 +655,37 @@ class UserMessage(BaseMessage):
                 if start < end:
                     cmd_args = content[start:end]
 
-            blocks.append(HeaderBlock(
-                text=f"Command: {cmd_name}",
-                icon="▸",
-                level=3,
-                styles={Style.USER}
-            ))
+            blocks.append(
+                HeaderBlock(
+                    text=f"Command: {cmd_name}", icon="▸", level=3, styles={Style.USER}
+                )
+            )
 
             if cmd_args:
                 blocks.append(KeyValueBlock(key="args", value=cmd_args, indent=1))
 
         elif content.startswith("<local-command-stdout>"):
             if config.show_tool_results:
-                stdout = content.replace("<local-command-stdout>", "").replace("</local-command-stdout>", "")
+                stdout = content.replace("<local-command-stdout>", "").replace(
+                    "</local-command-stdout>", ""
+                )
 
-                blocks.append(HeaderBlock(
-                    text="Output",
-                    icon="◆",
-                    level=3,
-                    styles={Style.USER}
-                ))
+                blocks.append(
+                    HeaderBlock(text="Output", icon="◆", level=3, styles={Style.USER})
+                )
 
                 lines = stdout.split("\n")
                 for line in lines[:TOOL_RESULT_PREVIEW_LINES]:
                     blocks.append(TextBlock(text=line, indent=2))
 
                 if len(lines) > TOOL_RESULT_PREVIEW_LINES:
-                    blocks.append(TextBlock(
-                        text=f"... ({len(lines)} lines total)",
-                        indent=2,
-                        styles={Style.METADATA}
-                    ))
+                    blocks.append(
+                        TextBlock(
+                            text=f"... ({len(lines)} lines total)",
+                            indent=2,
+                            styles={Style.METADATA},
+                        )
+                    )
 
         blocks.extend(self.render_metadata(config))
         blocks.append(SpacerBlock())
@@ -697,23 +706,29 @@ class SystemMessage(SystemStyleMessage):
     def render(self, config: RenderConfig) -> list[RenderBlock]:
         blocks: list[RenderBlock] = []
 
-        blocks.append(HeaderBlock(
-            text=f"SYSTEM ({self.subtype})",
-            icon="▸",
-            level=2,
-            styles={Style.SYSTEM}
-        ))
+        blocks.append(
+            HeaderBlock(
+                text=f"SYSTEM ({self.subtype})",
+                icon="▸",
+                level=2,
+                styles={Style.SYSTEM},
+            )
+        )
 
         if self.subtype == "init":
             blocks.append(KeyValueBlock(key="Model", value=self.model, indent=1))
-            blocks.append(KeyValueBlock(key="Version", value=self.claude_code_version, indent=1))
+            blocks.append(
+                KeyValueBlock(key="Version", value=self.claude_code_version, indent=1)
+            )
             blocks.append(KeyValueBlock(key="Directory", value=self.cwd, indent=1))
         elif self.subtype == "compact_boundary":
             pre_tokens = self.compactMetadata.get("preTokens", 0)
-            blocks.append(TextBlock(
-                text=f"{self.content} ({pre_tokens} tokens before compaction)",
-                indent=1
-            ))
+            blocks.append(
+                TextBlock(
+                    text=f"{self.content} ({pre_tokens} tokens before compaction)",
+                    indent=1,
+                )
+            )
         elif self.content:
             blocks.append(TextBlock(text=self.content, indent=1))
 
@@ -735,9 +750,9 @@ class FileHistorySnapshot(SystemStyleMessage):
                 text=f"File History Snapshot ({timestamp})",
                 icon="📸",
                 level=2,
-                styles={Style.SYSTEM}
+                styles={Style.SYSTEM},
             ),
-            SpacerBlock()
+            SpacerBlock(),
         ]
 
 
@@ -754,9 +769,9 @@ class SummaryMessage(BaseMessage):
                 icon="📋",
                 prefix="Summary:",
                 level=1,
-                styles={Style.INFO}
+                styles={Style.INFO},
             ),
-            SpacerBlock()
+            SpacerBlock(),
         ]
 
 
@@ -770,12 +785,14 @@ class QueueOperationMessage(SystemStyleMessage):
     def render(self, config: RenderConfig) -> list[RenderBlock]:
         blocks: list[RenderBlock] = []
 
-        blocks.append(HeaderBlock(
-            text=f"Queue: {self.operation}",
-            icon="⚙",
-            level=2,
-            styles={Style.SYSTEM}
-        ))
+        blocks.append(
+            HeaderBlock(
+                text=f"Queue: {self.operation}",
+                icon="⚙",
+                level=2,
+                styles={Style.SYSTEM},
+            )
+        )
 
         if self.content:
             for line in self.content.split("\n"):
@@ -800,34 +817,34 @@ class ResultMessage(BaseMessage):
         blocks: list[RenderBlock] = []
 
         blocks.append(DividerBlock(char="═", width=30))
-        blocks.append(HeaderBlock(
-            text="SESSION COMPLETE",
-            level=1,
-            styles={Style.BOLD, Style.INFO}
-        ))
+        blocks.append(
+            HeaderBlock(
+                text="SESSION COMPLETE", level=1, styles={Style.BOLD, Style.INFO}
+            )
+        )
         blocks.append(DividerBlock(char="═", width=30))
 
         blocks.append(KeyValueBlock(key="Status", value=self.subtype, indent=1))
         blocks.append(KeyValueBlock(key="Turns", value=str(self.num_turns), indent=1))
-        blocks.append(KeyValueBlock(
-            key="Duration",
-            value=f"{(self.duration_ms + 500) // 1000}s",
-            indent=1
-        ))
-        blocks.append(KeyValueBlock(
-            key="Cost",
-            value=f"${self.total_cost_usd:.4f}",
-            indent=1
-        ))
+        blocks.append(
+            KeyValueBlock(
+                key="Duration", value=f"{(self.duration_ms + 500) // 1000}s", indent=1
+            )
+        )
+        blocks.append(
+            KeyValueBlock(key="Cost", value=f"${self.total_cost_usd:.4f}", indent=1)
+        )
 
         in_tokens = self.usage.get("input_tokens", 0)
         out_tokens = self.usage.get("output_tokens", 0)
         cache_read = self.usage.get("cache_read_input_tokens", 0)
-        blocks.append(KeyValueBlock(
-            key="Tokens",
-            value=f"in={in_tokens} out={out_tokens} cache={cache_read}",
-            indent=1
-        ))
+        blocks.append(
+            KeyValueBlock(
+                key="Tokens",
+                value=f"in={in_tokens} out={out_tokens} cache={cache_read}",
+                indent=1,
+            )
+        )
 
         blocks.extend(self.render_metadata(config))
         blocks.append(SpacerBlock())
@@ -850,7 +867,7 @@ Message = Annotated[
         QueueOperationMessage,
         ResultMessage,
     ],
-    Field(discriminator="type")
+    Field(discriminator="type"),
 ]
 
 
@@ -872,8 +889,13 @@ def parse_message(data: dict[str, Any]) -> BaseMessage:
 
     # Known types that can be handled by the discriminated union
     known_types = {
-        "assistant", "user", "system", "file-history-snapshot",
-        "summary", "queue-operation", "result"
+        "assistant",
+        "user",
+        "system",
+        "file-history-snapshot",
+        "summary",
+        "queue-operation",
+        "result",
     }
 
     if msg_type in known_types:
