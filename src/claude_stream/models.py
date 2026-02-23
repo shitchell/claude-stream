@@ -148,7 +148,6 @@ class RenderConfig:
             "system",
             "assistant",
             "user",
-            "file-history-snapshot",
             "summary",
             "queue-operation",
             "result",
