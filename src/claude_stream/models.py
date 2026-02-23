@@ -492,6 +492,7 @@ class UserMessage(BaseMessage):
     message: dict[str, Any] = Field(default_factory=dict)
     userType: str = ""
     toolUseResult: dict[str, Any] | str | None = None
+    isMeta: bool = False
 
     def is_subagent_result(self) -> bool:
         """Check if this is a sub-agent result."""
@@ -504,6 +505,10 @@ class UserMessage(BaseMessage):
         """Check if this is a tool result (not sub-agent)."""
         return self.toolUseResult is not None and not self.is_subagent_result()
 
+    def is_meta(self) -> bool:
+        """Check if this is a system-injected meta message (skill loading, etc.)."""
+        return self.isMeta
+
     def is_local_command(self) -> bool:
         """Check if this is a local slash command."""
         content = self.message.get("content", "")
@@ -511,6 +516,19 @@ class UserMessage(BaseMessage):
             content.startswith("<command-name>") or
             content.startswith("<local-command-stdout>")
         )
+
+    def get_subtype(self) -> str:
+        """Return the subtype of this user message."""
+        if self.is_subagent_result():
+            return "subagent-result"
+        elif self.is_tool_result():
+            return "tool-result"
+        elif self.is_meta():
+            return "meta"
+        elif self.is_local_command():
+            return "local-command"
+        else:
+            return "user-input"
 
     def render(self, config: RenderConfig) -> list[RenderBlock]:
         if self.is_subagent_result():
@@ -520,14 +538,15 @@ class UserMessage(BaseMessage):
         elif self.is_local_command():
             return self.render_local_command(config)
         else:
-            return self.render_user_input(config)
+            return self.render_user_input(config, meta=self.is_meta())
 
-    def render_user_input(self, config: RenderConfig) -> list[RenderBlock]:
+    def render_user_input(self, config: RenderConfig, meta: bool = False) -> list[RenderBlock]:
         """Render as regular user input."""
         blocks: list[RenderBlock] = []
 
+        label = "USER [meta]" if meta else "USER"
         blocks.append(HeaderBlock(
-            text="USER",
+            text=label,
             icon="◂",
             level=2,
             styles={Style.USER}

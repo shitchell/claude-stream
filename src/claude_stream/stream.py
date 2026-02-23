@@ -12,7 +12,7 @@ from typing import Any, TextIO
 
 from .blocks import Style, TextBlock
 from .formatters import Formatter
-from .models import BaseMessage, RenderConfig, parse_message
+from .models import BaseMessage, UserMessage, RenderConfig, parse_message
 
 
 def should_show_message(msg: BaseMessage, data: dict[str, Any], config: RenderConfig) -> bool:
@@ -22,20 +22,32 @@ def should_show_message(msg: BaseMessage, data: dict[str, Any], config: RenderCo
     if config.show_types and msg.type not in config.show_types:
         return False
 
+    # For user messages, filter out tool-result/subagent-result when
+    # --hide-tool-results is set
+    if isinstance(msg, UserMessage) and not config.show_tool_results:
+        subtype = msg.get_subtype()
+        if subtype in ("tool-result", "subagent-result"):
+            return False
+
     # Check subtype filter
     if config.show_subtypes:
-        subtype = data.get("subtype")
-        if msg.type == "assistant":
-            content_types = set()
-            content = data.get("message", {}).get("content", [])
-            if isinstance(content, list):
-                for item in content:
-                    if isinstance(item, dict):
-                        content_types.add(item.get("type"))
-            if not config.show_subtypes.intersection(content_types):
+        if isinstance(msg, UserMessage):
+            # User messages use computed subtypes
+            if msg.get_subtype() not in config.show_subtypes:
                 return False
-        elif subtype and subtype not in config.show_subtypes:
-            return False
+        else:
+            subtype = data.get("subtype")
+            if msg.type == "assistant":
+                content_types = set()
+                content = data.get("message", {}).get("content", [])
+                if isinstance(content, list):
+                    for item in content:
+                        if isinstance(item, dict):
+                            content_types.add(item.get("type"))
+                if not config.show_subtypes.intersection(content_types):
+                    return False
+            elif subtype and subtype not in config.show_subtypes:
+                return False
 
     # Check tool filter
     if config.show_tools:
