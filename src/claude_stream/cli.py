@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 from pathlib import Path
 from typing import TextIO
@@ -128,7 +129,7 @@ Examples:
         "--format", "-F",
         choices=["ansi", "markdown", "plain"],
         default=None,
-        help="Output format (default: ansi, or plain if piped)"
+        help="Output format (default: markdown if CLAUDECODE is set, ansi if TTY, plain if piped)"
     )
 
     # Visibility controls
@@ -193,10 +194,16 @@ def main() -> int:
     if args.exclude_patterns:
         config.exclude_patterns = args.exclude_patterns
 
-    # Select formatter (default to plain if stdout is not a TTY)
+    # Select formatter
+    # Priority: explicit --format > CLAUDECODE env var > TTY detection
     output_format = args.format
     if output_format is None:
-        output_format = "ansi" if sys.stdout.isatty() else "plain"
+        if os.environ.get("CLAUDECODE"):
+            output_format = "markdown"
+        elif sys.stdout.isatty():
+            output_format = "ansi"
+        else:
+            output_format = "plain"
 
     formatter: Formatter
     if output_format == "markdown":
