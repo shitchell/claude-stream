@@ -594,7 +594,15 @@ class UserMessage(BaseMessage):
         blocks: list[RenderBlock] = []
 
         label = "USER [meta]" if meta else "USER"
-        blocks.append(HeaderBlock(text=label, icon="◂", level=2, styles={Style.USER}, suffix=self.format_timestamp_suffix(config)))
+        blocks.append(
+            HeaderBlock(
+                text=label,
+                icon="◂",
+                level=2,
+                styles={Style.USER},
+                suffix=self.format_timestamp_suffix(config),
+            )
+        )
 
         content = self.message.get("content")
         if isinstance(content, str) and content:
@@ -697,7 +705,11 @@ class UserMessage(BaseMessage):
 
             blocks.append(
                 HeaderBlock(
-                    text=f"Command: {cmd_name}", icon="▸", level=3, styles={Style.USER}, suffix=self.format_timestamp_suffix(config)
+                    text=f"Command: {cmd_name}",
+                    icon="▸",
+                    level=3,
+                    styles={Style.USER},
+                    suffix=self.format_timestamp_suffix(config),
                 )
             )
 
