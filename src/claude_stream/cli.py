@@ -21,6 +21,7 @@ from . import (
 )
 from .blocks import DividerBlock, HeaderBlock, Style
 from .dateparse import parse_datetime
+from .grouping import parse_group_by_spec, render_grouped, scout_files
 from .models import parse_message
 from .stream import should_show_message
 
@@ -125,6 +126,8 @@ Examples:
     %(prog)s --latest --after "today"              # Today's messages only
     %(prog)s --after "now -2h" --before "now" .    # Messages from last 2 hours
     %(prog)s --latest --hide-timestamps            # Hide timestamp display
+    %(prog)s --after "today" . --group-by time:%%Y%%m%%d%%H  # Interleave by hour
+    %(prog)s --search "error" --group-by project            # Group by project
         """,
     )
 
@@ -205,6 +208,14 @@ Examples:
         action="append",
         dest="exclude_patterns",
         help="Exclude messages matching pattern (repeatable)",
+    )
+
+    # Grouping
+    parser.add_argument(
+        "--group-by",
+        dest="group_by",
+        metavar="SPEC",
+        help="Group results by 'project' and/or 'time:<strftime>' (comma-separated)",
     )
 
     # Timestamp display
@@ -400,8 +411,21 @@ def main() -> int:
             print(f"error: cannot parse --after date: {args.after}", file=sys.stderr)
             return 1
 
+    # Parse --group-by
+    group_config = None
+    if args.group_by:
+        try:
+            group_config = parse_group_by_spec(args.group_by)
+            config.group_by = group_config
+        except ValueError as e:
+            print(f"error: {e}", file=sys.stderr)
+            return 1
+
     # Handle watch mode
     if args.watch:
+        if args.group_by:
+            print("error: cannot combine --group-by with --watch", file=sys.stderr)
+            return 1
         watch_target = resolve_project_path(args.watch)
         if not watch_target.exists():
             print(f"error: path not found: {args.watch}", file=sys.stderr)
@@ -462,23 +486,27 @@ def main() -> int:
             return 0
         else:
             # Stream mode — render each matching file
-            for mf in matching_files:
-                if len(matching_files) > 1:
-                    print(
-                        formatter.format(
-                            [
-                                DividerBlock(char="─", width=60),
-                                HeaderBlock(
-                                    text=str(mf),
-                                    icon="📄",
-                                    level=2,
-                                    styles={Style.INFO},
-                                ),
-                            ]
+            if group_config:
+                handles = scout_files(matching_files, config, tail_lines=args.lines)
+                render_grouped(handles, config, group_config, formatter)
+            else:
+                for mf in matching_files:
+                    if len(matching_files) > 1:
+                        print(
+                            formatter.format(
+                                [
+                                    DividerBlock(char="─", width=60),
+                                    HeaderBlock(
+                                        text=str(mf),
+                                        icon="📄",
+                                        level=2,
+                                        styles={Style.INFO},
+                                    ),
+                                ]
+                            )
                         )
-                    )
-                with open(mf) as f:
-                    process_stream(f, config, formatter, tail_lines=args.lines)
+                    with open(mf) as f:
+                        process_stream(f, config, formatter, tail_lines=args.lines)
             return 0
 
     # Resolve file path (used by both directory mode and file mode)
@@ -494,38 +522,42 @@ def main() -> int:
                 reverse=True,
             )
 
-            for jf in jsonl_files:
-                has_output = False
-                with open(jf) as f:
-                    for line in f:
-                        line_stripped = line.strip()
-                        if not line_stripped:
-                            continue
-                        try:
-                            data = _json.loads(line_stripped)
-                            msg = parse_message(data)
-                            if should_show_message(msg, data, config):
-                                has_output = True
-                                break
-                        except _json.JSONDecodeError:
-                            continue
-
-                if has_output:
-                    print(
-                        formatter.format(
-                            [
-                                DividerBlock(char="─", width=60),
-                                HeaderBlock(
-                                    text=str(jf),
-                                    icon="📄",
-                                    level=2,
-                                    styles={Style.INFO},
-                                ),
-                            ]
-                        )
-                    )
+            if group_config:
+                handles = scout_files(jsonl_files, config, tail_lines=args.lines)
+                render_grouped(handles, config, group_config, formatter)
+            else:
+                for jf in jsonl_files:
+                    has_output = False
                     with open(jf) as f:
-                        process_stream(f, config, formatter, tail_lines=args.lines)
+                        for line in f:
+                            line_stripped = line.strip()
+                            if not line_stripped:
+                                continue
+                            try:
+                                data = _json.loads(line_stripped)
+                                msg = parse_message(data)
+                                if should_show_message(msg, data, config):
+                                    has_output = True
+                                    break
+                            except _json.JSONDecodeError:
+                                continue
+
+                    if has_output:
+                        print(
+                            formatter.format(
+                                [
+                                    DividerBlock(char="─", width=60),
+                                    HeaderBlock(
+                                        text=str(jf),
+                                        icon="📄",
+                                        level=2,
+                                        styles={Style.INFO},
+                                    ),
+                                ]
+                            )
+                        )
+                        with open(jf) as f:
+                            process_stream(f, config, formatter, tail_lines=args.lines)
 
             return 0
 
