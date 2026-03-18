@@ -34,7 +34,7 @@ class TestSearchFilepathMode:
         with patch.object(
             sys,
             "argv",
-            ["claude-stream", "--search", "needle", str(tmp_path)],
+            ["claugs", "show", "--search", "needle", "-l", str(tmp_path)],
         ):
             code = main()
         assert code == 0
@@ -57,7 +57,7 @@ class TestSearchFilepathMode:
         with patch.object(
             sys,
             "argv",
-            ["claude-stream", "--search", "xyznotfound", str(tmp_path)],
+            ["claugs", "show", "--search", "xyznotfound", "-l", str(tmp_path)],
         ):
             code = main()
         assert code == 0
@@ -65,8 +65,9 @@ class TestSearchFilepathMode:
         assert out.strip() == ""
 
 
-class TestSearchStreamMode:
-    def test_search_stream_renders_output(self, tmp_path, capsys):
+class TestSearchRenderMode:
+    def test_search_renders_output_by_default(self, tmp_path, capsys):
+        """Default behavior with --search is to render (no -l flag)."""
         create_session_file(
             tmp_path,
             "session-001",
@@ -83,10 +84,10 @@ class TestSearchStreamMode:
             sys,
             "argv",
             [
-                "claude-stream",
+                "claugs",
+                "show",
                 "--search",
                 "needle",
-                "--stream",
                 "--hide-timestamps",
                 str(tmp_path),
             ],
@@ -97,25 +98,21 @@ class TestSearchStreamMode:
         assert "find the needle" in out
 
 
-class TestSearchMutualExclusivity:
-    def test_search_with_session_is_error(self, tmp_path, capsys):
+class TestSearchComposability:
+    def test_search_with_session_is_composable(self, tmp_path, capsys):
+        """--search + --session should work (no longer an error)."""
+        # This combination filters the session file by search text.
+        # Since we can't easily create a session in ~/.claude/projects,
+        # we test that it doesn't error with "cannot combine".
+        # A missing session is expected.
         with patch.object(
             sys,
             "argv",
-            ["claude-stream", "--search", "text", "--session", "abc-123"],
+            ["claugs", "show", "--search", "text", "--session", "nonexistent-uuid"],
         ):
             code = main()
         assert code != 0
         err = capsys.readouterr().err
-        assert "cannot combine" in err.lower()
-
-    def test_search_with_latest_is_error(self, tmp_path, capsys):
-        with patch.object(
-            sys,
-            "argv",
-            ["claude-stream", "--search", "text", "--latest"],
-        ):
-            code = main()
-        assert code != 0
-        err = capsys.readouterr().err
-        assert "cannot combine" in err.lower()
+        # Should fail with "session not found", not "cannot combine"
+        assert "session not found" in err.lower()
+        assert "cannot combine" not in err.lower()

@@ -9,36 +9,40 @@ from conftest import create_session_file
 
 class TestGroupByFlagParsing:
     def test_group_by_default_is_none(self):
-        with patch.object(sys, "argv", ["claude-stream", "--latest"]):
-            args = parse_args()
+        with patch.object(sys, "argv", ["claugs", "show", "--latest"]):
+            _, args = parse_args()
         assert args.group_by is None
 
     def test_group_by_project(self):
         with patch.object(
-            sys, "argv", ["claude-stream", "--latest", "--group-by", "project"]
+            sys, "argv", ["claugs", "show", "--latest", "--group-by", "project"]
         ):
-            args = parse_args()
+            _, args = parse_args()
         assert args.group_by == "project"
 
     def test_group_by_time(self):
         with patch.object(
-            sys, "argv", ["claude-stream", "--latest", "--group-by", "time:%Y%m%d%H"]
+            sys,
+            "argv",
+            ["claugs", "show", "--latest", "--group-by", "time:%Y%m%d%H"],
         ):
-            args = parse_args()
+            _, args = parse_args()
         assert args.group_by == "time:%Y%m%d%H"
 
 
 class TestGroupByWithWatch:
-    def test_group_by_with_watch_is_error(self, tmp_path, capsys):
+    def test_group_by_not_on_watch(self):
+        """watch subcommand does not have --group-by."""
         with patch.object(
             sys,
             "argv",
-            ["claude-stream", "--watch", str(tmp_path), "--group-by", "project"],
+            ["claugs", "watch", "/tmp", "--group-by", "project"],
         ):
-            code = main()
-        assert code != 0
-        err = capsys.readouterr().err
-        assert "cannot combine" in err.lower()
+            # watch parser should reject --group-by
+            import pytest
+
+            with pytest.raises(SystemExit):
+                parse_args()
 
 
 class TestGroupByDirectoryMode:
@@ -77,7 +81,8 @@ class TestGroupByDirectoryMode:
             sys,
             "argv",
             [
-                "claude-stream",
+                "claugs",
+                "show",
                 "--group-by",
                 "project",
                 "--hide-timestamps",
@@ -128,7 +133,8 @@ class TestGroupByDirectoryMode:
             sys,
             "argv",
             [
-                "claude-stream",
+                "claugs",
+                "show",
                 "--group-by",
                 "time:%Y%m%d%H",
                 "--hide-timestamps",

@@ -31,7 +31,8 @@ class TestBeforeAfterFlags:
             sys,
             "argv",
             [
-                "claude-stream",
+                "claugs",
+                "show",
                 "--after",
                 "2026-03-17T15:00:00",
                 "--hide-timestamps",
@@ -75,7 +76,8 @@ class TestDirectoryMode:
             sys,
             "argv",
             [
-                "claude-stream",
+                "claugs",
+                "show",
                 "--after",
                 "2026-03-16",
                 "--hide-timestamps",
@@ -119,11 +121,13 @@ class TestSearchWithTimeFilter:
             sys,
             "argv",
             [
-                "claude-stream",
+                "claugs",
+                "show",
                 "--search",
                 "needle",
                 "--after",
                 "2026-03-15",
+                "-l",
                 str(tmp_path),
             ],
         ):
