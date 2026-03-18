@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import argparse
+import json as _json
 import os
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import TextIO
 
@@ -17,6 +19,10 @@ from . import (
     process_stream,
     watch_path,
 )
+from .blocks import DividerBlock, HeaderBlock, Style
+from .dateparse import parse_datetime
+from .models import parse_message
+from .stream import should_show_message
 
 
 def encode_path(path: str) -> str:
@@ -114,6 +120,11 @@ Examples:
     %(prog)s --watch ~/.claude/projects/        # Watch all sessions
     %(prog)s --watch .                          # Watch current dir's Claude sessions
     %(prog)s --watch ~/myproject -n 10          # Watch project with initial context
+    %(prog)s --search "error message"              # Find sessions containing text
+    %(prog)s --search "bug" --stream ~/project     # Render matching sessions
+    %(prog)s --latest --after "today"              # Today's messages only
+    %(prog)s --after "now -2h" --before "now" .    # Messages from last 2 hours
+    %(prog)s --latest --hide-timestamps            # Hide timestamp display
         """,
     )
 
@@ -196,6 +207,50 @@ Examples:
         help="Exclude messages matching pattern (repeatable)",
     )
 
+    # Timestamp display
+    parser.add_argument(
+        "--show-timestamps",
+        dest="show_timestamps",
+        action="store_true",
+        default=None,
+    )
+    parser.add_argument(
+        "--hide-timestamps", dest="show_timestamps", action="store_false"
+    )
+    parser.add_argument(
+        "--timestamp-format",
+        dest="timestamp_format",
+        default=None,
+        help="Timestamp format string (default: %%Y-%%m-%%d %%H:%%M:%%S)",
+    )
+
+    # Timestamp filtering
+    parser.add_argument(
+        "--before",
+        dest="before",
+        metavar="DATETIME",
+        help="Only show messages before this time",
+    )
+    parser.add_argument(
+        "--after",
+        dest="after",
+        metavar="DATETIME",
+        help="Only show messages after this time",
+    )
+
+    # Search mode
+    parser.add_argument(
+        "--search",
+        dest="search_text",
+        metavar="TEXT",
+        help="Search JSONL files for matching text",
+    )
+    parser.add_argument(
+        "--stream",
+        action="store_true",
+        help="With --search: render matching sessions instead of listing filepaths",
+    )
+
     # Watch mode
     parser.add_argument(
         "-w",
@@ -216,6 +271,58 @@ Examples:
     return parser.parse_args()
 
 
+def _find_matching_files(
+    jsonl_files: list[Path],
+    search_text: str,
+    config: RenderConfig,
+) -> list[Path]:
+    """Find JSONL files matching search text and optional time filters.
+
+    Each line must satisfy BOTH the text match AND time range (if set)
+    for a file to be considered matching.
+    """
+    has_time_filter = config.before is not None or config.after is not None
+    matching: list[Path] = []
+
+    for jf in jsonl_files:
+        try:
+            with open(jf) as f:
+                for line in f:
+                    if search_text not in line:
+                        continue
+
+                    # Text matched — check time filter if present
+                    if not has_time_filter:
+                        matching.append(jf)
+                        break  # Early termination
+
+                    # Parse timestamp from matching line
+                    try:
+                        data = _json.loads(line)
+                        ts_str = data.get("timestamp", "")
+                        if not ts_str:
+                            continue  # No timestamp on this line, keep looking
+                        msg_dt = datetime.fromisoformat(
+                            ts_str.replace("Z", "+00:00")
+                        )
+                        if msg_dt.tzinfo is None:
+                            msg_dt = msg_dt.replace(tzinfo=timezone.utc)
+                        in_range = True
+                        if config.after and msg_dt < config.after:
+                            in_range = False
+                        if config.before and msg_dt > config.before:
+                            in_range = False
+                        if in_range:
+                            matching.append(jf)
+                            break
+                    except (_json.JSONDecodeError, ValueError):
+                        continue
+        except (IOError, OSError):
+            continue
+
+    return matching
+
+
 def main() -> int:
     """Main entry point."""
 
@@ -229,6 +336,7 @@ def main() -> int:
         config.show_metadata = False
         config.show_thinking = False
         config.show_tool_results = False
+        config.show_timestamps = False
         config.show_types = {"assistant", "user"}
 
     # Apply explicit visibility flags (override compact if set)
@@ -238,6 +346,10 @@ def main() -> int:
         config.show_tool_results = args.show_tool_results
     if args.show_metadata is not None:
         config.show_metadata = args.show_metadata
+    if args.show_timestamps is not None:
+        config.show_timestamps = args.show_timestamps
+    if args.timestamp_format is not None:
+        config.timestamp_format = args.timestamp_format
 
     # Note: show_line_numbers uses store_true (default=False), not the None pattern,
     # because it's opt-in only — --compact doesn't affect it.
@@ -273,6 +385,25 @@ def main() -> int:
     else:
         formatter = ANSIFormatter()
 
+    # Parse --before/--after into datetimes
+    if args.before:
+        try:
+            config.before = parse_datetime(args.before)
+        except ValueError:
+            print(
+                f"error: cannot parse --before date: {args.before}", file=sys.stderr
+            )
+            return 1
+
+    if args.after:
+        try:
+            config.after = parse_datetime(args.after)
+        except ValueError:
+            print(
+                f"error: cannot parse --after date: {args.after}", file=sys.stderr
+            )
+            return 1
+
     # Handle watch mode
     if args.watch:
         watch_target = resolve_project_path(args.watch)
@@ -292,11 +423,124 @@ def main() -> int:
         )
         return 0
 
+    # Handle search mode
+    if args.search_text:
+        # Mutual exclusivity check
+        if args.watch:
+            print(
+                "error: cannot combine --search with --watch", file=sys.stderr
+            )
+            return 1
+        if args.session:
+            print(
+                "error: cannot combine --search with --session", file=sys.stderr
+            )
+            return 1
+        if args.latest:
+            print(
+                "error: cannot combine --search with --latest", file=sys.stderr
+            )
+            return 1
+
+        # Determine search scope
+        search_path = args.input_file or args.file
+        if search_path:
+            search_dir = resolve_project_path(search_path)
+        else:
+            search_dir = Path.home() / ".claude" / "projects"
+
+        if not search_dir.exists():
+            print(f"error: path not found: {search_dir}", file=sys.stderr)
+            return 1
+
+        # Collect matching files
+        if search_dir.is_file():
+            jsonl_files = [search_dir]
+        else:
+            jsonl_files = sorted(
+                search_dir.rglob("*.jsonl"),
+                key=lambda p: p.stat().st_mtime,
+                reverse=True,
+            )
+
+        matching_files = _find_matching_files(jsonl_files, args.search_text, config)
+
+        if not args.stream:
+            # Filepath-only mode
+            for mf in matching_files:
+                print(mf)
+            return 0
+        else:
+            # Stream mode — render each matching file
+            for mf in matching_files:
+                if len(matching_files) > 1:
+                    print(
+                        formatter.format(
+                            [
+                                DividerBlock(char="─", width=60),
+                                HeaderBlock(
+                                    text=str(mf),
+                                    icon="📄",
+                                    level=2,
+                                    styles={Style.INFO},
+                                ),
+                            ]
+                        )
+                    )
+                with open(mf) as f:
+                    process_stream(f, config, formatter, tail_lines=args.lines)
+            return 0
+
+    # Resolve file path (used by both directory mode and file mode)
+    file_path = args.input_file or args.file
+
+    # Handle directory mode (directory + filters, no --search, no --watch)
+    if file_path:
+        resolved_path = resolve_project_path(file_path)
+        if resolved_path.is_dir():
+            jsonl_files = sorted(
+                resolved_path.rglob("*.jsonl"),
+                key=lambda p: p.stat().st_mtime,
+                reverse=True,
+            )
+
+            for jf in jsonl_files:
+                has_output = False
+                with open(jf) as f:
+                    for line in f:
+                        line_stripped = line.strip()
+                        if not line_stripped:
+                            continue
+                        try:
+                            data = _json.loads(line_stripped)
+                            msg = parse_message(data)
+                            if should_show_message(msg, data, config):
+                                has_output = True
+                                break
+                        except _json.JSONDecodeError:
+                            continue
+
+                if has_output:
+                    print(
+                        formatter.format(
+                            [
+                                DividerBlock(char="─", width=60),
+                                HeaderBlock(
+                                    text=str(jf),
+                                    icon="📄",
+                                    level=2,
+                                    styles={Style.INFO},
+                                ),
+                            ]
+                        )
+                    )
+                    with open(jf) as f:
+                        process_stream(f, config, formatter, tail_lines=args.lines)
+
+            return 0
+
     # Determine input source
     input_file: TextIO
-
-    # Positional file takes precedence over -f/--file
-    file_path = args.input_file or args.file
 
     if file_path:
         if not file_path.exists():

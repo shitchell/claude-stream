@@ -42,6 +42,9 @@ dev = [
 [project.scripts]
 claude-stream = "claude_stream.cli:main"
 
+[tool.pytest.ini_options]
+pythonpath = ["tests"]
+
 [project.urls]
 Homepage = "https://github.com/shitchell/claude-stream"
 Repository = "https://github.com/shitchell/claude-stream"
