@@ -111,6 +111,12 @@ class SpacerBlock(RenderBlock):
 
 # Type alias for any render block
 AnyBlock = (
-    HeaderBlock | TextBlock | CodeBlock | KeyValueBlock |
-    DividerBlock | ListBlock | NestedBlock | SpacerBlock
+    HeaderBlock
+    | TextBlock
+    | CodeBlock
+    | KeyValueBlock
+    | DividerBlock
+    | ListBlock
+    | NestedBlock
+    | SpacerBlock
 )

@@ -58,9 +58,7 @@ class TestHeaderSuffixPlain:
         assert "·" not in result
 
     def test_with_suffix(self):
-        block = HeaderBlock(
-            text="ASSISTANT", level=2, suffix="· 2026-03-17 14:23:05"
-        )
+        block = HeaderBlock(text="ASSISTANT", level=2, suffix="· 2026-03-17 14:23:05")
         result = PlainFormatter().format_block(block)
         assert "ASSISTANT" in result
         assert "· 2026-03-17 14:23:05" in result
