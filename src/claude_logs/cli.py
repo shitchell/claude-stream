@@ -298,7 +298,7 @@ Examples:
         """,
     )
 
-    subparsers = parser.add_subparsers(dest="command")
+    subparsers = parser.add_subparsers(dest="command", required=False)
 
     # -- show subcommand --
     show_parser = subparsers.add_parser(
@@ -356,16 +356,26 @@ Examples:
         "path", type=Path, help="JSONL filepath or directory to watch"
     )
 
-    # Use parse_known_args first to check if a subcommand was given.
-    # If not, re-parse with "show" injected so that show-specific flags
-    # (like --search, --latest, etc.) are recognized.
-    args, remaining = parser.parse_known_args()
-    if args.command is None:
-        args = parser.parse_args(["show"] + sys.argv[1:])
-    elif remaining:
-        # A subcommand was given but there are unrecognized args
-        parser.parse_args()  # This will print the error and exit
+    # Default subcommand handling: check if the first non-flag argument
+    # is a known subcommand. If not, inject "show" so positional paths
+    # and show-specific flags are recognized.
+    # This makes "claugs file.jsonl" equivalent to "claugs show file.jsonl".
+    raw_args = sys.argv[1:]
+    known_commands = {"show", "watch"}
 
+    # Find first non-flag argument
+    first_positional = None
+    for arg in raw_args:
+        if arg.startswith("-"):
+            continue
+        first_positional = arg
+        break
+
+    if first_positional not in known_commands:
+        # No subcommand given — inject "show"
+        raw_args = ["show"] + raw_args
+
+    args = parser.parse_args(raw_args)
     return parser, args
 
 

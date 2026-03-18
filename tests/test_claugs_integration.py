@@ -39,12 +39,8 @@ class TestShowBasicRendering:
         # Should contain result block
         assert "SESSION COMPLETE" in out
 
-    def test_render_with_implicit_show(self, fixtures_dir, capsys):
-        """claugs --latest (no 'show' keyword) uses implicit show subcommand.
-
-        Note: Implicit show only works with flag-only args (e.g., --latest,
-        --session). Positional paths require explicit 'show'.
-        """
+    def test_render_with_implicit_show_flags(self, fixtures_dir, capsys):
+        """claugs --latest (no 'show' keyword) uses implicit show subcommand."""
         fpath = fixtures_dir / "v2.1.77" / "complete_session.jsonl"
         with (
             patch.object(sys, "argv", ["claugs", "--latest", "--hide-timestamps"]),
@@ -55,6 +51,15 @@ class TestShowBasicRendering:
         out = capsys.readouterr().out
         assert "Hello, what files are in this directory?" in out
         assert "SESSION COMPLETE" in out
+
+    def test_render_with_implicit_show_positional(self, fixtures_dir, capsys):
+        """claugs <file> (positional path, no 'show') also works."""
+        fpath = str(fixtures_dir / "v2.1.75" / "complete_session.jsonl")
+        with patch.object(sys, "argv", ["claugs", fpath, "--hide-timestamps"]):
+            code = main()
+        assert code == 0
+        out = capsys.readouterr().out
+        assert "Hello, what files are in this directory?" in out
 
     def test_render_latest(self, fixtures_dir, capsys):
         """claugs --latest renders the most recent session."""
