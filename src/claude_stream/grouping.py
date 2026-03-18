@@ -10,10 +10,14 @@ import json
 import sys
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from itertools import groupby as itertools_groupby
 from pathlib import Path
 from typing import TextIO
 
+from .blocks import DividerBlock, HeaderBlock, Style
+from .formatters import Formatter
 from .models import GroupByConfig, RenderConfig
+from .stream import process_stream, should_show_message
 
 
 def parse_group_by_spec(spec: str) -> GroupByConfig:
@@ -210,3 +214,106 @@ def compute_bucket_key(dt: datetime, time_format: str) -> str:
     Converts to local timezone before formatting.
     """
     return dt.astimezone().strftime(time_format)
+
+
+# =============================================================================
+# Pass 2: Grouped rendering
+# =============================================================================
+
+
+def render_grouped(
+    handles: list[FileHandle],
+    config: RenderConfig,
+    group_config: GroupByConfig,
+    formatter: Formatter,
+) -> None:
+    """Pass 2: Render files with grouping.
+
+    Callers must pre-scout files via scout_files() which handles tail_lines
+    and time-filter offsets.
+    """
+    if group_config.time_format is not None:
+        _render_time_interleaved(handles, config, group_config, formatter)
+    elif group_config.by_project:
+        _render_project_grouped(handles, config, formatter)
+    else:
+        _render_sequential(handles, config, formatter)
+
+
+def _render_sequential(
+    handles: list[FileHandle],
+    config: RenderConfig,
+    formatter: Formatter,
+) -> None:
+    """Render files sequentially with file headers."""
+    show_headers = len(handles) > 1
+
+    for handle in handles:
+        if show_headers:
+            print(
+                formatter.format(
+                    [
+                        DividerBlock(char="─", width=60),
+                        HeaderBlock(
+                            text=str(handle.path),
+                            icon="📄",
+                            level=2,
+                            styles={Style.INFO},
+                        ),
+                    ]
+                )
+            )
+        with open(handle.path, "r") as f:
+            f.seek(handle.offset)
+            process_stream(f, config, formatter)
+
+
+def _render_project_grouped(
+    handles: list[FileHandle],
+    config: RenderConfig,
+    formatter: Formatter,
+) -> None:
+    """Render files grouped by project."""
+    sorted_handles = sorted(handles, key=lambda h: h.project)
+
+    for project, group in itertools_groupby(sorted_handles, key=lambda h: h.project):
+        print(
+            formatter.format(
+                [
+                    DividerBlock(char="─", width=60),
+                    HeaderBlock(
+                        text=f"Project: {project}",
+                        icon="──",
+                        level=2,
+                        styles={Style.SYSTEM},
+                    ),
+                ]
+            )
+        )
+
+        for handle in group:
+            print(
+                formatter.format(
+                    [
+                        HeaderBlock(
+                            text=str(handle.path),
+                            icon="📄",
+                            level=2,
+                            styles={Style.INFO},
+                        ),
+                    ]
+                )
+            )
+            with open(handle.path, "r") as f:
+                f.seek(handle.offset)
+                process_stream(f, config, formatter)
+
+
+def _render_time_interleaved(
+    handles: list[FileHandle],
+    config: RenderConfig,
+    group_config: GroupByConfig,
+    formatter: Formatter,
+) -> None:
+    """Render files interleaved by time bucket."""
+    raise NotImplementedError("Time interleaving not yet implemented")
