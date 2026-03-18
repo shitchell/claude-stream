@@ -9,6 +9,9 @@ Architecture:
 
 from __future__ import annotations
 
+# Date parsing
+from .dateparse import parse_datetime
+
 # Block types and Style enum
 from .blocks import (
     AnyBlock,
@@ -93,6 +96,8 @@ if WATCHDOG_AVAILABLE:
     from .watcher import JSONLEventHandler
 
 __all__ = [
+    # Date parsing
+    "parse_datetime",
     # Blocks
     "AnyBlock",
     "CodeBlock",
