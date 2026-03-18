@@ -356,6 +356,8 @@ class BaseMessage(BaseModel):
             return ""
         try:
             dt = _datetime.fromisoformat(self.timestamp.replace("Z", "+00:00"))
+            # Convert to local timezone for display
+            dt = dt.astimezone()
             formatted = dt.strftime(config.timestamp_format)
             return f"· {formatted}"
         except (ValueError, OSError):

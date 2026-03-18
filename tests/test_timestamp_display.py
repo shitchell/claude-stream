@@ -1,5 +1,7 @@
 """Tests for timestamp display in message rendering."""
 
+from datetime import datetime, timezone
+
 from claude_stream.blocks import HeaderBlock, Style
 from claude_stream.models import (
     AssistantMessage,
@@ -21,6 +23,12 @@ def _find_header(blocks) -> HeaderBlock | None:
     return None
 
 
+def _expected_local(iso_utc: str, fmt: str = "%Y-%m-%d %H:%M:%S") -> str:
+    """Convert a UTC ISO timestamp to expected local-time formatted string."""
+    dt = datetime.fromisoformat(iso_utc.replace("Z", "+00:00")).astimezone()
+    return f"· {dt.strftime(fmt)}"
+
+
 class TestTimestampInHeaders:
     def test_assistant_message_has_timestamp_suffix(self, sample_assistant_message):
         config = RenderConfig(show_timestamps=True)
@@ -28,7 +36,8 @@ class TestTimestampInHeaders:
         blocks = msg.render(config)
         header = _find_header(blocks)
         assert header is not None
-        assert "· 2026-03-17 14:23:05" in header.suffix
+        expected = _expected_local("2026-03-17T14:23:05.000Z")
+        assert expected in header.suffix
 
     def test_user_message_has_timestamp_suffix(self, sample_user_message):
         config = RenderConfig(show_timestamps=True)
@@ -36,7 +45,8 @@ class TestTimestampInHeaders:
         blocks = msg.render(config)
         header = _find_header(blocks)
         assert header is not None
-        assert "· 2026-03-17 14:23:12" in header.suffix
+        expected = _expected_local("2026-03-17T14:23:12.000Z")
+        assert expected in header.suffix
 
     def test_system_message_has_timestamp_suffix(self, sample_system_init_message):
         config = RenderConfig(show_timestamps=True)
@@ -44,14 +54,16 @@ class TestTimestampInHeaders:
         blocks = msg.render(config)
         header = _find_header(blocks)
         assert header is not None
-        assert "· 2026-03-17 14:22:58" in header.suffix
+        expected = _expected_local("2026-03-17T14:22:58.000Z")
+        assert expected in header.suffix
 
     def test_result_message_has_timestamp_suffix(self, sample_result_message):
         config = RenderConfig(show_timestamps=True)
         msg = parse_message(sample_result_message)
         blocks = msg.render(config)
         headers = [b for b in blocks if isinstance(b, HeaderBlock)]
-        assert any("· 2026-03-17 14:30:00" in h.suffix for h in headers)
+        expected = _expected_local("2026-03-17T14:30:00.000Z")
+        assert any(expected in h.suffix for h in headers)
 
 
 class TestTimestampHidden:
@@ -71,7 +83,8 @@ class TestTimestampFormat:
         blocks = msg.render(config)
         header = _find_header(blocks)
         assert header is not None
-        assert "· 14:23" in header.suffix
+        expected = _expected_local("2026-03-17T14:23:05.000Z", "%H:%M")
+        assert expected in header.suffix
 
 
 class TestTimestampMissing:
