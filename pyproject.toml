@@ -28,11 +28,15 @@ classifiers = [
 dependencies = [
     "pydantic>=2.0",
     "typing_extensions>=4.0",
+    "python-dateutil>=2.8",
 ]
 
 [project.optional-dependencies]
 watch = [
     "watchdog>=3.0",
+]
+dev = [
+    "pytest>=7.0",
 ]
 
 [project.scripts]
