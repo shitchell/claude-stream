@@ -227,12 +227,14 @@ Examples:
     # Timestamp filtering
     parser.add_argument(
         "--before",
+        "--until",
         dest="before",
         metavar="DATETIME",
         help="Only show messages before this time",
     )
     parser.add_argument(
         "--after",
+        "--since",
         dest="after",
         metavar="DATETIME",
         help="Only show messages after this time",
