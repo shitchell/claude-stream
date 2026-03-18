@@ -42,21 +42,26 @@ _RELATIVE_RE = re.compile(
 
 # Regex for "N units ago" syntax: "30 minutes ago", "2 hours ago"
 _AGO_RE = re.compile(
-    r"^(\d+)\s+"
-    r"(seconds?|minutes?|hours?|days?|weeks?|months?|years?)"
-    r"\s+ago$",
+    r"^(\d+)\s+" r"(seconds?|minutes?|hours?|days?|weeks?|months?|years?)" r"\s+ago$",
     re.IGNORECASE,
 )
 
 # Map lowercase unit names to seconds (for "ago" syntax)
 _AGO_UNIT_SECONDS: dict[str, int] = {
-    "second": 1, "seconds": 1,
-    "minute": 60, "minutes": 60,
-    "hour": 3600, "hours": 3600,
-    "day": 86400, "days": 86400,
-    "week": 604800, "weeks": 604800,
-    "month": 2629743, "months": 2629743,
-    "year": 31556926, "years": 31556926,
+    "second": 1,
+    "seconds": 1,
+    "minute": 60,
+    "minutes": 60,
+    "hour": 3600,
+    "hours": 3600,
+    "day": 86400,
+    "days": 86400,
+    "week": 604800,
+    "weeks": 604800,
+    "month": 2629743,
+    "months": 2629743,
+    "year": 31556926,
+    "years": 31556926,
 }
 
 # Map unit strings to seconds
