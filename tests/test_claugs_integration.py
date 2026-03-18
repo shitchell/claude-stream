@@ -46,10 +46,9 @@ class TestShowBasicRendering:
         --session). Positional paths require explicit 'show'.
         """
         fpath = fixtures_dir / "v2.1.77" / "complete_session.jsonl"
-        with patch.object(
-            sys, "argv", ["claugs", "--latest", "--hide-timestamps"]
-        ), patch(
-            "claude_logs.cli.find_session_file", return_value=fpath
+        with (
+            patch.object(sys, "argv", ["claugs", "--latest", "--hide-timestamps"]),
+            patch("claude_logs.cli.find_session_file", return_value=fpath),
         ):
             code = main()
         assert code == 0
@@ -60,10 +59,9 @@ class TestShowBasicRendering:
     def test_render_latest(self, fixtures_dir, capsys):
         """claugs --latest renders the most recent session."""
         fpath = fixtures_dir / "v2.1.77" / "complete_session.jsonl"
-        with patch.object(
-            sys, "argv", ["claugs", "--latest", "--hide-timestamps"]
-        ), patch(
-            "claude_logs.cli.find_session_file", return_value=fpath
+        with (
+            patch.object(sys, "argv", ["claugs", "--latest", "--hide-timestamps"]),
+            patch("claude_logs.cli.find_session_file", return_value=fpath),
         ):
             code = main()
         assert code == 0
@@ -74,12 +72,19 @@ class TestShowBasicRendering:
     def test_render_session_by_uuid(self, fixtures_dir, capsys):
         """claugs show --session UUID renders that session."""
         fpath = fixtures_dir / "v2.1.75" / "complete_session.jsonl"
-        with patch.object(
-            sys,
-            "argv",
-            ["claugs", "show", "--session", "a1b2c3d4-e5f6-7890-abcd-ef1234567890", "--hide-timestamps"],
-        ), patch(
-            "claude_logs.cli.find_session_file", return_value=fpath
+        with (
+            patch.object(
+                sys,
+                "argv",
+                [
+                    "claugs",
+                    "show",
+                    "--session",
+                    "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+                    "--hide-timestamps",
+                ],
+            ),
+            patch("claude_logs.cli.find_session_file", return_value=fpath),
         ):
             code = main()
         assert code == 0
@@ -114,9 +119,7 @@ class TestShowBasicRendering:
     def test_compact_mode(self, fixtures_dir, capsys):
         """claugs show <file> --compact hides thinking, tools, metadata, timestamps."""
         fpath = fixtures_dir / "v2.1.75" / "complete_session.jsonl"
-        with patch.object(
-            sys, "argv", ["claugs", "show", "--compact", str(fpath)]
-        ):
+        with patch.object(sys, "argv", ["claugs", "show", "--compact", str(fpath)]):
             code = main()
         assert code == 0
         out = capsys.readouterr().out
@@ -134,7 +137,14 @@ class TestShowBasicRendering:
         with patch.object(
             sys,
             "argv",
-            ["claugs", "show", "--timestamp-format", "%H:%M", "--show-timestamps", str(fpath)],
+            [
+                "claugs",
+                "show",
+                "--timestamp-format",
+                "%H:%M",
+                "--show-timestamps",
+                str(fpath),
+            ],
         ):
             code = main()
         assert code == 0
@@ -166,8 +176,11 @@ class TestShowFiltering:
             sys,
             "argv",
             [
-                "claugs", "show", "--hide-timestamps",
-                "--after", "2026-03-15T10:00:10Z",
+                "claugs",
+                "show",
+                "--hide-timestamps",
+                "--after",
+                "2026-03-15T10:00:10Z",
                 str(fpath),
             ],
         ):
@@ -188,8 +201,11 @@ class TestShowFiltering:
             sys,
             "argv",
             [
-                "claugs", "show", "--hide-timestamps",
-                "--before", "2026-03-15T10:00:10Z",
+                "claugs",
+                "show",
+                "--hide-timestamps",
+                "--before",
+                "2026-03-15T10:00:10Z",
                 str(fpath),
             ],
         ):
@@ -211,9 +227,13 @@ class TestShowFiltering:
             sys,
             "argv",
             [
-                "claugs", "show", "--hide-timestamps",
-                "--after", "2026-03-15T10:00:05Z",
-                "--before", "2026-03-15T10:00:10Z",
+                "claugs",
+                "show",
+                "--hide-timestamps",
+                "--after",
+                "2026-03-15T10:00:05Z",
+                "--before",
+                "2026-03-15T10:00:10Z",
                 str(fpath),
             ],
         ):
@@ -241,8 +261,11 @@ class TestShowFiltering:
             sys,
             "argv",
             [
-                "claugs", "show", "--hide-timestamps",
-                "--grep", "README.md",
+                "claugs",
+                "show",
+                "--hide-timestamps",
+                "--grep",
+                "README.md",
                 str(fpath),
             ],
         ):
@@ -262,9 +285,13 @@ class TestShowFiltering:
             sys,
             "argv",
             [
-                "claugs", "show", "--hide-timestamps",
-                "--exclude", "SESSION COMPLETE",
-                "--exclude", "success",
+                "claugs",
+                "show",
+                "--hide-timestamps",
+                "--exclude",
+                "SESSION COMPLETE",
+                "--exclude",
+                "success",
                 str(fpath),
             ],
         ):
@@ -284,8 +311,11 @@ class TestShowFiltering:
             sys,
             "argv",
             [
-                "claugs", "show", "--hide-timestamps",
-                "--show-type", "user",
+                "claugs",
+                "show",
+                "--hide-timestamps",
+                "--show-type",
+                "user",
                 str(fpath),
             ],
         ):
@@ -317,8 +347,11 @@ class TestShowSearch:
             sys,
             "argv",
             [
-                "claugs", "show", "--hide-timestamps",
-                "--search", "README.md",
+                "claugs",
+                "show",
+                "--hide-timestamps",
+                "--search",
+                "README.md",
                 str(fpath),
             ],
         ):
@@ -335,8 +368,11 @@ class TestShowSearch:
             sys,
             "argv",
             [
-                "claugs", "show", "--hide-timestamps",
-                "--search", "xyzzy_nonexistent_text",
+                "claugs",
+                "show",
+                "--hide-timestamps",
+                "--search",
+                "xyzzy_nonexistent_text",
                 str(fpath),
             ],
         ):
@@ -352,8 +388,11 @@ class TestShowSearch:
             sys,
             "argv",
             [
-                "claugs", "show", "-l",
-                "--search", "README.md",
+                "claugs",
+                "show",
+                "-l",
+                "--search",
+                "README.md",
                 str(fpath),
             ],
         ):
@@ -365,15 +404,20 @@ class TestShowSearch:
     def test_search_composable_with_latest(self, fixtures_dir, capsys):
         """--search + --latest works (no longer mutually exclusive)."""
         fpath = fixtures_dir / "v2.1.77" / "complete_session.jsonl"
-        with patch.object(
-            sys,
-            "argv",
-            [
-                "claugs", "show", "--search", "config.json",
-                "--latest", "--hide-timestamps",
-            ],
-        ), patch(
-            "claude_logs.cli.find_session_file", return_value=fpath
+        with (
+            patch.object(
+                sys,
+                "argv",
+                [
+                    "claugs",
+                    "show",
+                    "--search",
+                    "config.json",
+                    "--latest",
+                    "--hide-timestamps",
+                ],
+            ),
+            patch("claude_logs.cli.find_session_file", return_value=fpath),
         ):
             code = main()
         assert code == 0
@@ -415,9 +459,13 @@ class TestShowSearch:
             sys,
             "argv",
             [
-                "claugs", "show", "-l",
-                "--search", "needle",
-                "--after", "2026-03-17T12:00:00Z",
+                "claugs",
+                "show",
+                "-l",
+                "--search",
+                "needle",
+                "--after",
+                "2026-03-17T12:00:00Z",
                 str(tmp_path),
             ],
         ):
@@ -457,8 +505,11 @@ class TestShowDirectoryMode:
             sys,
             "argv",
             [
-                "claugs", "show", "-l",
-                "--search", "project-a",
+                "claugs",
+                "show",
+                "-l",
+                "--search",
+                "project-a",
                 str(mp_dir),
             ],
         ):
@@ -471,9 +522,7 @@ class TestShowDirectoryMode:
     def test_directory_filepaths_only(self, fixtures_dir, capsys):
         """Directory + -l lists all JSONL filepaths."""
         mp_dir = fixtures_dir / "multi_project"
-        with patch.object(
-            sys, "argv", ["claugs", "show", "-l", str(mp_dir)]
-        ):
+        with patch.object(sys, "argv", ["claugs", "show", "-l", str(mp_dir)]):
             code = main()
         assert code == 0
         out = capsys.readouterr().out
@@ -487,8 +536,11 @@ class TestShowDirectoryMode:
             sys,
             "argv",
             [
-                "claugs", "show", "--hide-timestamps",
-                "--group-by", "project",
+                "claugs",
+                "show",
+                "--hide-timestamps",
+                "--group-by",
+                "project",
                 str(mp_dir),
             ],
         ):
@@ -505,8 +557,11 @@ class TestShowDirectoryMode:
             sys,
             "argv",
             [
-                "claugs", "show", "--hide-timestamps",
-                "--group-by", "time:%Y%m%d%H",
+                "claugs",
+                "show",
+                "--hide-timestamps",
+                "--group-by",
+                "time:%Y%m%d%H",
                 str(mp_dir),
             ],
         ):
@@ -518,7 +573,10 @@ class TestShowDirectoryMode:
         # to a local time bucket like [2026031710] or [2026031714] etc.
         # Just verify a bracket-delimited bucket key is present.
         import re
-        assert re.search(r"\[20260317\d{2}\]", out), f"No time bucket header found in output"
+
+        assert re.search(
+            r"\[20260317\d{2}\]", out
+        ), f"No time bucket header found in output"
 
 
 # =============================================================================
@@ -532,9 +590,7 @@ class TestShowFilepathsOnly:
     def test_single_file_prints_filepath(self, fixtures_dir, capsys):
         """claugs show -l <file> prints the filepath."""
         fpath = fixtures_dir / "v2.1.75" / "complete_session.jsonl"
-        with patch.object(
-            sys, "argv", ["claugs", "show", "-l", str(fpath)]
-        ):
+        with patch.object(sys, "argv", ["claugs", "show", "-l", str(fpath)]):
             code = main()
         assert code == 0
         out = capsys.readouterr().out
@@ -543,9 +599,7 @@ class TestShowFilepathsOnly:
     def test_directory_prints_all_filepaths(self, fixtures_dir, capsys):
         """claugs show -l <dir> prints all JSONL filepaths."""
         mp_dir = fixtures_dir / "multi_project"
-        with patch.object(
-            sys, "argv", ["claugs", "show", "-l", str(mp_dir)]
-        ):
+        with patch.object(sys, "argv", ["claugs", "show", "-l", str(mp_dir)]):
             code = main()
         assert code == 0
         out = capsys.readouterr().out
@@ -568,9 +622,10 @@ class TestShowFilepathsOnly:
 
     def test_filepaths_only_stdin_error(self, capsys):
         """claugs -l with stdin is an error."""
-        with patch.object(
-            sys, "argv", ["claugs", "-l"]
-        ), patch.object(sys, "stdin", wraps=sys.stdin) as mock_stdin:
+        with (
+            patch.object(sys, "argv", ["claugs", "-l"]),
+            patch.object(sys, "stdin", wraps=sys.stdin) as mock_stdin,
+        ):
             mock_stdin.isatty = lambda: False
             code = main()
         assert code == 1
@@ -588,9 +643,10 @@ class TestShowErrors:
 
     def test_no_input_source(self, capsys):
         """No file/dir/stdin/--latest gives error."""
-        with patch.object(
-            sys, "argv", ["claugs", "show"]
-        ), patch.object(sys.stdin, "isatty", return_value=True):
+        with (
+            patch.object(sys, "argv", ["claugs", "show"]),
+            patch.object(sys.stdin, "isatty", return_value=True),
+        ):
             code = main()
         assert code == 1
         err = capsys.readouterr().err
@@ -758,8 +814,11 @@ class TestFixtureRendering:
             sys,
             "argv",
             [
-                "claugs", "show", "--hide-timestamps",
-                "--group-by", "project",
+                "claugs",
+                "show",
+                "--hide-timestamps",
+                "--group-by",
+                "project",
                 str(mp_dir),
             ],
         ):
@@ -922,9 +981,7 @@ class TestParseArgs:
 
     def test_lines_flag(self):
         """-n / --lines is parsed."""
-        with patch.object(
-            sys, "argv", ["claugs", "show", "-n", "20", "--latest"]
-        ):
+        with patch.object(sys, "argv", ["claugs", "show", "-n", "20", "--latest"]):
             _, args = parse_args()
         assert args.lines == 20
 
@@ -1131,9 +1188,10 @@ class TestStdinProcessing:
         fake_stdin = io.StringIO(content)
         fake_stdin.isatty = lambda: False
 
-        with patch.object(
-            sys, "argv", ["claugs", "show", "--hide-timestamps"]
-        ), patch.object(sys, "stdin", fake_stdin):
+        with (
+            patch.object(sys, "argv", ["claugs", "show", "--hide-timestamps"]),
+            patch.object(sys, "stdin", fake_stdin),
+        ):
             code = main()
         assert code == 0
         out = capsys.readouterr().out
@@ -1167,19 +1225,19 @@ class TestEdgeCases:
 
         content = (
             "\n"
-            + json.dumps({
-                "type": "user",
-                "uuid": "a",
-                "timestamp": "2026-03-17T10:00:00Z",
-                "message": {"content": "test message"},
-            })
+            + json.dumps(
+                {
+                    "type": "user",
+                    "uuid": "a",
+                    "timestamp": "2026-03-17T10:00:00Z",
+                    "message": {"content": "test message"},
+                }
+            )
             + "\n\n\n"
         )
         f = tmp_path / "blanks.jsonl"
         f.write_text(content)
-        with patch.object(
-            sys, "argv", ["claugs", "show", "--hide-timestamps", str(f)]
-        ):
+        with patch.object(sys, "argv", ["claugs", "show", "--hide-timestamps", str(f)]):
             code = main()
         assert code == 0
         out = capsys.readouterr().out
@@ -1191,19 +1249,19 @@ class TestEdgeCases:
 
         content = (
             "this is not json\n"
-            + json.dumps({
-                "type": "user",
-                "uuid": "a",
-                "timestamp": "2026-03-17T10:00:00Z",
-                "message": {"content": "valid message"},
-            })
+            + json.dumps(
+                {
+                    "type": "user",
+                    "uuid": "a",
+                    "timestamp": "2026-03-17T10:00:00Z",
+                    "message": {"content": "valid message"},
+                }
+            )
             + "\n"
         )
         f = tmp_path / "invalid.jsonl"
         f.write_text(content)
-        with patch.object(
-            sys, "argv", ["claugs", "show", "--hide-timestamps", str(f)]
-        ):
+        with patch.object(sys, "argv", ["claugs", "show", "--hide-timestamps", str(f)]):
             code = main()
         assert code == 0
         captured = capsys.readouterr()
@@ -1222,9 +1280,7 @@ class TestEdgeCases:
 
     def test_filepaths_only_empty_directory(self, tmp_path, capsys):
         """claugs show -l on empty directory produces no output."""
-        with patch.object(
-            sys, "argv", ["claugs", "show", "-l", str(tmp_path)]
-        ):
+        with patch.object(sys, "argv", ["claugs", "show", "-l", str(tmp_path)]):
             code = main()
         assert code == 0
         out = capsys.readouterr().out
