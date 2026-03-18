@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import sys
+from datetime import datetime, timezone
 from typing import Any, TextIO
 
 from .blocks import Style, TextBlock
@@ -23,6 +24,22 @@ def should_show_message(
     # Check type filter
     if config.show_types and msg.type not in config.show_types:
         return False
+
+    # Check timestamp filters
+    if config.before or config.after:
+        ts_str = data.get("timestamp", "")
+        if ts_str:
+            try:
+                msg_dt = datetime.fromisoformat(ts_str.replace("Z", "+00:00"))
+                if msg_dt.tzinfo is None:
+                    msg_dt = msg_dt.replace(tzinfo=timezone.utc)
+                if config.after and msg_dt < config.after:
+                    return False
+                if config.before and msg_dt > config.before:
+                    return False
+            except (ValueError, OSError):
+                pass  # Can't parse timestamp — let it through
+        # Messages without timestamps pass through
 
     # For user messages, filter out tool-result/subagent-result when
     # --hide-tool-results is set

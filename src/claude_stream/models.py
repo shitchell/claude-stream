@@ -153,6 +153,10 @@ class RenderConfig:
     show_timestamps: bool = True
     timestamp_format: str = "%Y-%m-%d %H:%M:%S"
 
+    # Timestamp filtering
+    before: _datetime | None = None
+    after: _datetime | None = None
+
     # Filtering
     show_types: set[str] = field(
         default_factory=lambda: {
