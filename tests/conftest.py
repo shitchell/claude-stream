@@ -3,6 +3,7 @@
 import json
 import pytest
 from datetime import datetime, timezone
+from pathlib import Path
 
 
 @pytest.fixture
@@ -136,3 +137,9 @@ def create_session_file(directory, session_id, messages):
     lines = [json.dumps(m) + "\n" for m in messages]
     f.write_text("".join(lines))
     return f
+
+
+@pytest.fixture
+def fixtures_dir():
+    """Path to the JSONL test fixtures directory."""
+    return Path(__file__).parent / "fixtures"
