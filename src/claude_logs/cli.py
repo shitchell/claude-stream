@@ -369,30 +369,11 @@ def _build_filters(args: argparse.Namespace) -> "FilterConfig":
             shown.update(name.strip() for name in spec.split(","))
 
     # Warn on unknown filter names
-    _KNOWN_FILTERS = {
-        "thinking",
-        "tools",
-        "metadata",
-        "timestamps",
-        "line-numbers",
-        "user-input",
-        "tool-result",
-        "subagent-result",
-        "system-meta",
-        "local-command",
-        "init",
-        "compact-boundary",
-        "success",
-        "system",
-        "assistant",
-        "user",
-        "summary",
-        "queue-operation",
-        "result",
-        "file-history-snapshot",
-    }
+    from .models import get_filter_registry
+
+    known = set(get_filter_registry().keys())
     for name in show_only | shown | hidden:
-        if name not in _KNOWN_FILTERS:
+        if name not in known:
             print(f"warning: unknown filter: {name}", file=sys.stderr)
 
     return FilterConfig(show_only=show_only, shown=shown, hidden=hidden)
@@ -417,36 +398,30 @@ def _build_config(args: argparse.Namespace) -> RenderConfig:
 
 def _print_filter_list() -> None:
     """Print available filter names and exit."""
+    from .models import get_filter_registry
+
+    registry = get_filter_registry()
+
     print("Available filter names for --show, --hide, --show-only:\n")
-    print("Message types:")
-    print("  assistant          Assistant responses")
-    print("  user               User input messages")
-    print("  system             System messages (init, compact_boundary, etc.)")
-    print("  summary            Summary messages")
-    print("  queue-operation    Queue operation messages")
-    print("  result             Session result messages")
-    print("  file-history-snapshot  File history snapshots")
-    print()
-    print("User message subtypes:")
-    print("  user-input         Direct user input")
-    print("  tool-result        Tool result messages")
-    print("  subagent-result    Sub-agent result messages")
-    print("  system-meta        System-injected meta messages")
-    print("  local-command      Local slash command messages")
-    print()
-    print("System message subtypes:")
-    print("  init               System init messages")
-    print("  compact-boundary   Compaction boundary messages")
-    print("  success            Success result messages")
-    print()
-    print("Content visibility:")
-    print("  thinking           Thinking/reasoning blocks")
-    print("  tools              Tool use and tool result blocks")
-    print("  metadata           Message metadata (uuid, session, timestamp)")
-    print("  timestamps         Timestamp suffixes on headers")
-    print("  line-numbers       JSONL line number prefixes")
-    print()
-    print("Defaults hidden: metadata, line-numbers, file-history-snapshot")
+
+    categories = {
+        "type": "Message types",
+        "subtype": "Subtypes",
+        "content": "Content visibility",
+    }
+    for cat_key, cat_label in categories.items():
+        items = {k: v for k, v in registry.items() if v["category"] == cat_key}
+        if not items:
+            continue
+        print(f"{cat_label}:")
+        for name, info in items.items():
+            default = "hidden" if not info["default_visible"] else "shown"
+            print(f"  {name:24s} {info['description']} (default: {default})")
+        print()
+
+    defaults = sorted(k for k, v in registry.items() if not v["default_visible"])
+    if defaults:
+        print(f"Defaults hidden: {', '.join(defaults)}")
 
 
 def _build_formatter(args: argparse.Namespace) -> Formatter:

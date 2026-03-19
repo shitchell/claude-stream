@@ -71,6 +71,7 @@ from .models import (
     AssistantMessage,
     BaseMessage,
     FileHistorySnapshot,
+    ProgressMessage,
     QueueOperationMessage,
     ResultMessage,
     SummaryMessage,
@@ -80,6 +81,8 @@ from .models import (
     # Discriminated union and parser
     Message,
     parse_message,
+    # Registry
+    get_filter_registry,
     # Config
     FilterConfig,
     GroupByConfig,
@@ -158,6 +161,7 @@ __all__ = [
     "BaseMessage",
     "FileHistorySnapshot",
     "Message",
+    "ProgressMessage",
     "QueueOperationMessage",
     "ResultMessage",
     "SummaryMessage",
@@ -169,6 +173,7 @@ __all__ = [
     "GroupByConfig",
     "RenderConfig",
     "parse_message",
+    "get_filter_registry",
     # Constants
     "TOOL_INPUT_TRUNCATE_LENGTH",
     "TOOL_RESULT_PREVIEW_LINES",

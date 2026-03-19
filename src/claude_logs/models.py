@@ -150,18 +150,25 @@ class FilterConfig:
     1. shown (explicit --show) always wins
     2. hidden (explicit --hide) overrides defaults and show-only
     3. show_only (whitelist base) hides everything not listed
-    4. DEFAULT_HIDDEN for items hidden by default
+    4. get_default_hidden() for items hidden by default (derived from model registries)
     """
 
     show_only: set[str] = field(default_factory=set)
     shown: set[str] = field(default_factory=set)
     hidden: set[str] = field(default_factory=set)
 
-    DEFAULT_HIDDEN: ClassVar[set[str]] = {
-        "metadata",
-        "line-numbers",
-        "file-history-snapshot",
-    }
+    _default_hidden_cache: ClassVar[set[str] | None] = None
+
+    @classmethod
+    def get_default_hidden(cls) -> set[str]:
+        """Derive default-hidden filters from model registries."""
+        if cls._default_hidden_cache is None:
+            cls._default_hidden_cache = {
+                name
+                for name, info in get_filter_registry().items()
+                if not info["default_visible"]
+            }
+        return cls._default_hidden_cache
 
     def is_visible(self, name: str) -> bool:
         """Check if a filter name is visible."""
@@ -171,7 +178,7 @@ class FilterConfig:
             return False
         if self.show_only and name not in self.show_only:
             return False
-        return name not in self.DEFAULT_HIDDEN
+        return name not in self.get_default_hidden()
 
 
 @dataclass
@@ -212,6 +219,11 @@ class ContentBlock(BaseModel):
 
     type: str
 
+    # Filter metadata (override in subclasses to register as a content filter)
+    _filter_name: ClassVar[str] = ""  # empty = not a filter
+    _filter_description: ClassVar[str] = ""
+    _filter_default_visible: ClassVar[bool] = True
+
     def render(self, config: RenderConfig) -> list[RenderBlock]:
         """Render this content block."""
         return []
@@ -237,6 +249,9 @@ class ThinkingContent(ContentBlock):
     thinking: str = ""
     signature: str = ""  # Cryptographic signature, usually not displayed
 
+    _filter_name: ClassVar[str] = "thinking"
+    _filter_description: ClassVar[str] = "Thinking/reasoning blocks"
+
     def render(self, config: RenderConfig) -> list[RenderBlock]:
         if not config.filters.is_visible("thinking"):
             return []
@@ -255,6 +270,9 @@ class ToolUseContent(ContentBlock):
     id: str = ""
     name: str = ""
     input: dict[str, Any] = Field(default_factory=dict)
+
+    _filter_name: ClassVar[str] = "tools"
+    _filter_description: ClassVar[str] = "Tool invocations and results"
 
     def render(self, config: RenderConfig) -> list[RenderBlock]:
         if not config.filters.is_visible("tools"):
@@ -287,6 +305,9 @@ class ToolResultContent(ContentBlock):
     tool_use_id: str = ""
     content: ToolResultContentValue = ""
     is_error: bool = False
+
+    _filter_name: ClassVar[str] = "tools"
+    _filter_description: ClassVar[str] = "Tool invocations and results"
 
     def render(self, config: RenderConfig) -> list[RenderBlock]:
         if not config.filters.is_visible("tools"):
@@ -369,6 +390,39 @@ class ImageContent(ContentBlock):
 
 
 # =============================================================================
+# Content Block Sentinel Filters
+# =============================================================================
+# Lightweight sentinel classes for synthetic filters not tied to a single
+# content block type (timestamps, metadata, line-numbers).
+
+
+class _TimestampsFilter(ContentBlock):
+    """Sentinel for the timestamps display filter."""
+
+    type: Literal["_timestamps"] = "_timestamps"
+    _filter_name: ClassVar[str] = "timestamps"
+    _filter_description: ClassVar[str] = "Timestamp suffixes on headers"
+
+
+class _MetadataFilter(ContentBlock):
+    """Sentinel for the metadata display filter."""
+
+    type: Literal["_metadata"] = "_metadata"
+    _filter_name: ClassVar[str] = "metadata"
+    _filter_description: ClassVar[str] = "Message metadata (uuid, session)"
+    _filter_default_visible: ClassVar[bool] = False
+
+
+class _LineNumbersFilter(ContentBlock):
+    """Sentinel for the line-numbers display filter."""
+
+    type: Literal["_line_numbers"] = "_line_numbers"
+    _filter_name: ClassVar[str] = "line-numbers"
+    _filter_description: ClassVar[str] = "JSONL line number prefixes"
+    _filter_default_visible: ClassVar[bool] = False
+
+
+# =============================================================================
 # Message Models - Base Classes
 # =============================================================================
 
@@ -380,6 +434,12 @@ class BaseMessage(BaseModel):
     uuid: str = ""
     timestamp: str = ""
     sessionId: str = Field(default="", alias="sessionId")
+
+    # Filter metadata (override in subclasses)
+    _filter_description: ClassVar[str] = ""
+    _filter_default_visible: ClassVar[bool] = True
+    _known_subtypes: ClassVar[dict[str, tuple[str, bool]]] = {}
+    # dict mapping subtype_name -> (description, default_visible)
 
     model_config = {"extra": "allow", "populate_by_name": True}
 
@@ -398,7 +458,10 @@ class BaseMessage(BaseModel):
 
     def render(self, config: RenderConfig) -> list[RenderBlock]:
         """Render this message to blocks. Override in subclasses."""
-        return [TextBlock(text=f"[Unknown message type: {self.type}]")]
+        import sys
+
+        print(f"warning: unknown message type: {self.type}", file=sys.stderr)
+        return []
 
     def render_metadata(self, config: RenderConfig) -> list[RenderBlock]:
         """Render metadata block if enabled."""
@@ -558,6 +621,7 @@ class AssistantMessage(AgentStyleMessage):
     """Assistant response message."""
 
     type: Literal["assistant"] = "assistant"
+    _filter_description: ClassVar[str] = "Assistant responses"
 
     def get_agent_label(self) -> str:
         if self.isSidechain:
@@ -573,6 +637,15 @@ class UserMessage(BaseMessage):
     userType: str = ""
     toolUseResult: dict[str, Any] | str | None = None
     isMeta: bool = False
+
+    _filter_description: ClassVar[str] = "User input messages"
+    _known_subtypes: ClassVar[dict[str, tuple[str, bool]]] = {
+        "user-input": ("Human-typed messages", True),
+        "tool-result": ("Tool output messages", True),
+        "subagent-result": ("Sub-agent output messages", True),
+        "system-meta": ("System-injected meta messages", True),
+        "local-command": ("Local slash command messages", True),
+    }
 
     def is_subagent_result(self) -> bool:
         """Check if this is a sub-agent result."""
@@ -782,6 +855,12 @@ class SystemMessage(SystemStyleMessage):
 
     type: Literal["system"] = "system"
     subtype: str = ""
+
+    _filter_description: ClassVar[str] = "System messages"
+    _known_subtypes: ClassVar[dict[str, tuple[str, bool]]] = {
+        "init": ("System initialization", True),
+        "compact-boundary": ("Compaction boundary", True),
+    }
     content: str = ""
     model: str = ""
     claude_code_version: str = ""
@@ -829,6 +908,9 @@ class FileHistorySnapshot(SystemStyleMessage):
     type: Literal["file-history-snapshot"] = "file-history-snapshot"
     snapshot: dict[str, Any] = Field(default_factory=dict)
 
+    _filter_description: ClassVar[str] = "File state snapshots"
+    _filter_default_visible: ClassVar[bool] = False
+
     def render(self, config: RenderConfig) -> list[RenderBlock]:
         timestamp = self.snapshot.get("timestamp", "unknown")
         return [
@@ -848,6 +930,8 @@ class SummaryMessage(BaseMessage):
 
     type: Literal["summary"] = "summary"
     summary: str = ""
+
+    _filter_description: ClassVar[str] = "Summary messages"
 
     def render(self, config: RenderConfig) -> list[RenderBlock]:
         return [
@@ -869,6 +953,8 @@ class QueueOperationMessage(SystemStyleMessage):
     type: Literal["queue-operation"] = "queue-operation"
     operation: str = ""
     content: str = ""
+
+    _filter_description: ClassVar[str] = "Queue operation messages"
 
     def render(self, config: RenderConfig) -> list[RenderBlock]:
         blocks: list[RenderBlock] = []
@@ -898,6 +984,11 @@ class ResultMessage(BaseMessage):
     type: Literal["result"] = "result"
     subtype: str = ""
     total_cost_usd: float = 0.0
+
+    _filter_description: ClassVar[str] = "Session completion"
+    _known_subtypes: ClassVar[dict[str, tuple[str, bool]]] = {
+        "success": ("Successful completion", True),
+    }
     duration_ms: int = 0
     num_turns: int = 0
     usage: UsageInfo = Field(default_factory=dict)  # type: ignore[assignment]
@@ -943,6 +1034,123 @@ class ResultMessage(BaseMessage):
         return blocks
 
 
+class ProgressMessage(SystemStyleMessage):
+    """Progress message (hooks, agent progress, etc.)."""
+
+    type: Literal["progress"] = "progress"
+    data: dict[str, Any] = Field(default_factory=dict)
+
+    _filter_description: ClassVar[str] = "Progress updates (hooks, agents)"
+    _filter_default_visible: ClassVar[bool] = False
+
+    def render(self, config: RenderConfig) -> list[RenderBlock]:
+        blocks: list[RenderBlock] = []
+        progress_type = self.data.get("type", "unknown")
+
+        if progress_type == "hook_progress":
+            hook_name = self.data.get("hookName", "unknown")
+            blocks.append(
+                HeaderBlock(
+                    text=f"Hook: {hook_name}",
+                    icon="⚙",
+                    level=3,
+                    styles={Style.SYSTEM},
+                    suffix=self.format_timestamp_suffix(config),
+                )
+            )
+            command = self.data.get("command", "")
+            if command:
+                blocks.append(TextBlock(text=command, indent=1, styles={Style.DIM}))
+        elif progress_type == "agent_progress":
+            blocks.append(
+                HeaderBlock(
+                    text="Agent Progress",
+                    icon="⚙",
+                    level=3,
+                    styles={Style.SYSTEM},
+                    suffix=self.format_timestamp_suffix(config),
+                )
+            )
+        else:
+            blocks.append(
+                HeaderBlock(
+                    text=f"Progress ({progress_type})",
+                    icon="⚙",
+                    level=3,
+                    styles={Style.SYSTEM},
+                    suffix=self.format_timestamp_suffix(config),
+                )
+            )
+
+        blocks.extend(self.render_metadata(config))
+        blocks.append(SpacerBlock())
+        return blocks
+
+
+# =============================================================================
+# Filter Registry (lazy scan of model subclasses)
+# =============================================================================
+
+
+def _walk_subclasses(cls: type) -> list[type]:
+    """Recursively collect all subclasses of a class."""
+    result: list[type] = []
+    for sub in cls.__subclasses__():
+        result.append(sub)
+        result.extend(_walk_subclasses(sub))
+    return result
+
+
+def get_filter_registry() -> dict[str, dict]:
+    """Get the complete filter registry by scanning all model subclasses.
+
+    Returns dict mapping filter_name -> {
+        "description": str,
+        "default_visible": bool,
+        "category": "type" | "subtype" | "content",
+    }
+    """
+    registry: dict[str, dict] = {}
+
+    # Scan all BaseMessage subclasses for message types
+    for cls in _walk_subclasses(BaseMessage):
+        type_field = cls.model_fields.get("type")
+        if not type_field:
+            continue
+        annotation = type_field.annotation
+        if not (hasattr(annotation, "__args__") and len(annotation.__args__) == 1):
+            continue
+        type_value = annotation.__args__[0]
+        registry[type_value] = {
+            "description": getattr(cls, "_filter_description", "") or type_value,
+            "default_visible": getattr(cls, "_filter_default_visible", True),
+            "category": "type",
+        }
+        for sub_name, (sub_desc, sub_visible) in getattr(
+            cls, "_known_subtypes", {}
+        ).items():
+            registry[sub_name] = {
+                "description": sub_desc,
+                "default_visible": sub_visible,
+                "category": "subtype",
+            }
+
+    # Scan ContentBlock subclasses for content filters
+    seen: set[str] = set()
+    for cls in _walk_subclasses(ContentBlock):
+        fname = getattr(cls, "_filter_name", "")
+        if not fname or fname in seen:
+            continue
+        seen.add(fname)
+        registry[fname] = {
+            "description": getattr(cls, "_filter_description", "") or fname,
+            "default_visible": getattr(cls, "_filter_default_visible", True),
+            "category": "content",
+        }
+
+    return registry
+
+
 # =============================================================================
 # Message Discriminated Union and Factory
 # =============================================================================
@@ -958,6 +1166,7 @@ Message = Annotated[
         SummaryMessage,
         QueueOperationMessage,
         ResultMessage,
+        ProgressMessage,
     ],
     Field(discriminator="type"),
 ]
@@ -971,6 +1180,21 @@ class _MessageAdapter(BaseModel):
     model_config = {"extra": "allow"}
 
 
+_known_types_cache: set[str] | None = None
+
+
+def _get_known_types() -> set[str]:
+    """Get the set of known message type names from the registry."""
+    global _known_types_cache
+    if _known_types_cache is None:
+        _known_types_cache = {
+            name
+            for name, info in get_filter_registry().items()
+            if info["category"] == "type"
+        }
+    return _known_types_cache
+
+
 def parse_message(data: dict[str, Any]) -> BaseMessage:
     """Parse a JSON dict into the appropriate message type.
 
@@ -979,18 +1203,7 @@ def parse_message(data: dict[str, Any]) -> BaseMessage:
     """
     msg_type = data.get("type", "")
 
-    # Known types that can be handled by the discriminated union
-    known_types = {
-        "assistant",
-        "user",
-        "system",
-        "file-history-snapshot",
-        "summary",
-        "queue-operation",
-        "result",
-    }
-
-    if msg_type in known_types:
+    if msg_type in _get_known_types():
         try:
             adapter = _MessageAdapter(root=data)  # type: ignore[arg-type]
             return adapter.root

@@ -13,7 +13,28 @@ from typing import Any, TextIO
 
 from .blocks import Style, TextBlock
 from .formatters import Formatter
-from .models import BaseMessage, UserMessage, RenderConfig, parse_message
+from .models import (
+    BaseMessage,
+    UserMessage,
+    RenderConfig,
+    get_filter_registry,
+    parse_message,
+)
+
+
+_subtype_names_cache: set[str] | None = None
+
+
+def _get_subtype_names() -> set[str]:
+    """Get the set of known subtype names from the registry."""
+    global _subtype_names_cache
+    if _subtype_names_cache is None:
+        _subtype_names_cache = {
+            name
+            for name, info in get_filter_registry().items()
+            if info["category"] == "subtype"
+        }
+    return _subtype_names_cache
 
 
 def should_show_message(
@@ -30,16 +51,7 @@ def should_show_message(
     # they are explicitly hidden or when show_only explicitly names subtypes.
     # If show_only only contains type-level names (e.g. "user"), subtypes
     # (e.g. "user-input") pass through.
-    _SUBTYPE_NAMES = {
-        "user-input",
-        "tool-result",
-        "subagent-result",
-        "system-meta",
-        "local-command",
-        "init",
-        "compact-boundary",
-        "success",
-    }
+    _SUBTYPE_NAMES = _get_subtype_names()
     _show_only_has_subtypes = bool(filters.show_only & _SUBTYPE_NAMES)
 
     if isinstance(msg, UserMessage):
