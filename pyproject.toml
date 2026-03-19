@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "claugs"
-version = "0.5.1"
+version = "0.6.0"
 description = "Parse and prettify Claude Code JSONL session logs"
 readme = "README.md"
 license = "WTFPL"
