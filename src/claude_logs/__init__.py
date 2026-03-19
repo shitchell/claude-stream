@@ -84,6 +84,7 @@ from .models import (
     parse_message,
     # Registry
     get_filter_registry,
+    LAST_VERIFIED_CLAUDE_CODE_VERSION,
     # Config
     FilterConfig,
     GroupByConfig,

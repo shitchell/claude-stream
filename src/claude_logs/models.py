@@ -30,6 +30,7 @@ from .blocks import (
 
 TOOL_RESULT_PREVIEW_LINES = 20
 TOOL_INPUT_TRUNCATE_LENGTH = 200
+LAST_VERIFIED_CLAUDE_CODE_VERSION = "2.1.77"
 
 
 # =============================================================================

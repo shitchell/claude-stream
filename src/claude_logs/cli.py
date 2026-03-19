@@ -270,6 +270,27 @@ Examples:
         """,
     )
 
+    # Version flags (on the main parser, before subcommands)
+    from importlib.metadata import version as pkg_version
+
+    from .models import LAST_VERIFIED_CLAUDE_CODE_VERSION
+
+    try:
+        claugs_version = pkg_version("claugs")
+    except Exception:
+        claugs_version = "unknown"
+
+    parser.add_argument(
+        "--version",
+        action="version",
+        version=f"claugs {claugs_version}",
+    )
+    parser.add_argument(
+        "--version-cc",
+        action="version",
+        version=f"Last verified against Claude Code {LAST_VERIFIED_CLAUDE_CODE_VERSION}",
+    )
+
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     # -- show subcommand --
@@ -422,6 +443,12 @@ def _print_filter_list() -> None:
     defaults = sorted(k for k, v in registry.items() if not v["default_visible"])
     if defaults:
         print(f"Defaults hidden: {', '.join(defaults)}")
+
+    from .models import LAST_VERIFIED_CLAUDE_CODE_VERSION
+
+    print(
+        f"\nMessage types verified against Claude Code v{LAST_VERIFIED_CLAUDE_CODE_VERSION}"
+    )
 
 
 def _build_formatter(args: argparse.Namespace) -> Formatter:
