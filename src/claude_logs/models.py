@@ -1087,6 +1087,32 @@ class ProgressMessage(SystemStyleMessage):
         return blocks
 
 
+class LastPromptMessage(BaseMessage):
+    """Last prompt message — stores the final user prompt for a session."""
+
+    type: Literal["last-prompt"] = "last-prompt"
+    lastPrompt: str = ""
+
+    _filter_description: ClassVar[str] = "Last prompt record"
+    _filter_default_visible: ClassVar[bool] = False
+
+    def render(self, config: RenderConfig) -> list[RenderBlock]:
+        blocks: list[RenderBlock] = []
+        blocks.append(
+            HeaderBlock(
+                text="Last Prompt",
+                icon="💬",
+                level=3,
+                styles={Style.INFO},
+                suffix=self.format_timestamp_suffix(config),
+            )
+        )
+        if self.lastPrompt:
+            blocks.append(TextBlock(text=self.lastPrompt, indent=1))
+        blocks.append(SpacerBlock())
+        return blocks
+
+
 # =============================================================================
 # Filter Registry (lazy scan of model subclasses)
 # =============================================================================
@@ -1167,6 +1193,7 @@ Message = Annotated[
         QueueOperationMessage,
         ResultMessage,
         ProgressMessage,
+        LastPromptMessage,
     ],
     Field(discriminator="type"),
 ]
