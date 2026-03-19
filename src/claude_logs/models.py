@@ -157,7 +157,11 @@ class FilterConfig:
     shown: set[str] = field(default_factory=set)
     hidden: set[str] = field(default_factory=set)
 
-    DEFAULT_HIDDEN: ClassVar[set[str]] = {"metadata", "line-numbers", "file-history-snapshot"}
+    DEFAULT_HIDDEN: ClassVar[set[str]] = {
+        "metadata",
+        "line-numbers",
+        "file-history-snapshot",
+    }
 
     def is_visible(self, name: str) -> bool:
         """Check if a filter name is visible."""
