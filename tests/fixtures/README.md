@@ -1,6 +1,6 @@
 # Test Fixtures
 
-This directory contains versioned JSONL test fixtures for the claude-stream / claugs tool.
+This directory contains versioned JSONL test fixtures for claugs.
 
 ## What These Fixtures Are
 
@@ -19,6 +19,7 @@ The fixtures cover all message types the tool handles:
 | `user` (tool-result) | Tool output returned to the model |
 | `assistant` (text after tool) | Response after receiving tool output |
 | `result` | Session completion record with cost, token counts, and duration |
+| `progress` | Hook/agent progress updates (hidden by default) |
 
 ## Versioning
 
