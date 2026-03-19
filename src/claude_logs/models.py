@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime as _datetime
-from typing import Annotated, Any, Literal, Union
+from typing import Annotated, Any, ClassVar, Literal, Union
 
 from pydantic import BaseModel, Field
 from typing_extensions import TypedDict
@@ -140,6 +140,34 @@ class CompactMetadata(TypedDict, total=False):
 # =============================================================================
 # Render Configuration
 # =============================================================================
+
+
+@dataclass
+class FilterConfig:
+    """Unified visibility configuration.
+
+    Resolution priority:
+    1. shown (explicit --show) always wins
+    2. hidden (explicit --hide) overrides defaults and show-only
+    3. show_only (whitelist base) hides everything not listed
+    4. DEFAULT_HIDDEN for items hidden by default
+    """
+
+    show_only: set[str] = field(default_factory=set)
+    shown: set[str] = field(default_factory=set)
+    hidden: set[str] = field(default_factory=set)
+
+    DEFAULT_HIDDEN: ClassVar[set[str]] = {"metadata", "line-numbers", "file-history-snapshot"}
+
+    def is_visible(self, name: str) -> bool:
+        """Check if a filter name is visible."""
+        if name in self.shown:
+            return True
+        if name in self.hidden:
+            return False
+        if self.show_only and name not in self.show_only:
+            return False
+        return name not in self.DEFAULT_HIDDEN
 
 
 @dataclass
